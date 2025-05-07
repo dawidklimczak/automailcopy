@@ -453,6 +453,45 @@ def main():
     - **Empatyczny** – wspierający, rozumiejący emocje odbiorcy
     """)
     
+    # Dodaj dokumentację zmiennych w panelu bocznym
+    with st.sidebar.expander("📚 Dokumentacja dostępnych zmiennych", expanded=False):
+        st.markdown("""
+        ### Podstawowe zmienne
+
+        | Zmienna | Opis |
+        |---------|------|
+        | `intro` | Wstęp, kontekst problemu |
+        | `why_created` | Powód powstania e-booka |
+        | `contents` | Spis treści/rozdziały |
+        | `problems_solved` | Rozwiązywane problemy |
+        | `target_audience` | Dla kogo jest e-book |
+        | `example` | Fragment z e-booka |
+
+        ### Elementy marketingowe
+
+        | Zmienna | Opis |
+        |---------|------|
+        | `call_to_action` | Wezwanie do działania |
+        | `key_benefits` | Główne korzyści |
+        | `guarantee` | Obietnica/gwarancja |
+        | `testimonials` | Opinie czytelników |
+        | `value_summary` | Podsumowanie wartości |
+        | `faq` | Pytania i odpowiedzi |
+        | `urgency` | Element pilności |
+        | `comparison` | Porównanie z konkurencją |
+        | `transformation_story` | Historia transformacji |
+        | `author_credentials` | O autorze (opcjonalne) |
+        
+        #### Użycie w szablonie HTML:
+        ```html
+        <div class="intro">
+          {!{ intro }!}
+        </div>
+        ```
+        """)
+        
+        st.markdown("💡 **Wskazówka:** Zmienne zawierają tylko podstawowe formatowanie HTML (bold, italic, listy).")
+    
     with st.form("input_form"):
         # Upload pliku PDF
         uploaded_file = st.file_uploader("Wybierz plik PDF z e-bookiem", type="pdf")
