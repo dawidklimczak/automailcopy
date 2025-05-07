@@ -845,7 +845,7 @@ def main():
                                                     # Aktualizuj dane w sesji
                                                     st.session_state.current_json_data[var] = new_content
                                                     # Odśwież stronę aby pokazać nowe dane
-                                                    st.experimental_rerun()
+                                                    st.rerun()
                         
                         tab_index += 1
                 
@@ -988,7 +988,7 @@ def main():
                                             # Aktualizuj dane w sesji
                                             st.session_state.current_json_data[var] = new_content
                                             # Odśwież stronę aby pokazać nowe dane
-                                            st.experimental_rerun()
+                                            st.rerun()
                 
                 tab_index += 1
         
