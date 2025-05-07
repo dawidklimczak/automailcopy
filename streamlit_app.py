@@ -70,18 +70,17 @@ def normalize_json_data(data):
         html_content += "</ul>"
         data["contents"] = html_content
     
-    # Podobnie dla sekcji FAQ - jeśli jest listą, konwertuj na HTML
+    # Podobnie dla sekcji FAQ - jeśli jest listą, konwertuj na prostą listę HTML
     if "faq" in data and isinstance(data["faq"], list):
-        html_content = "<dl>"
+        html_content = ""
         for item in data["faq"]:
             if isinstance(item, dict) and "pytanie" in item and "odpowiedz" in item:
-                html_content += f"<dt><strong>{item['pytanie']}</strong></dt><dd>{item['odpowiedz']}</dd>"
+                html_content += f"<strong>{item['pytanie']}</strong><br>{item['odpowiedz']}<br><br>"
             elif isinstance(item, dict) and "question" in item and "answer" in item:
-                html_content += f"<dt><strong>{item['question']}</strong></dt><dd>{item['answer']}</dd>"
-        html_content += "</dl>"
+                html_content += f"<strong>{item['question']}</strong><br>{item['answer']}<br><br>"
         data["faq"] = html_content
     
-    # Podobnie dla sekcji key_benefits - jeśli jest listą, konwertuj na HTML
+    # Podobnie dla sekcji key_benefits - jeśli jest listą, konwertuj na prostą listę HTML
     if "key_benefits" in data and isinstance(data["key_benefits"], list):
         html_content = "<ul>"
         for item in data["key_benefits"]:
@@ -92,17 +91,16 @@ def normalize_json_data(data):
         html_content += "</ul>"
         data["key_benefits"] = html_content
     
-    # Podobnie dla sekcji testimonials - jeśli jest listą, konwertuj na HTML
+    # Podobnie dla sekcji testimonials - jeśli jest listą, konwertuj na prosty tekst
     if "testimonials" in data and isinstance(data["testimonials"], list):
-        html_content = "<blockquote>"
+        html_content = ""
         for item in data["testimonials"]:
             if isinstance(item, str):
-                html_content += f"<p>\"{item}\"</p>"
+                html_content += f"\"{item}\"<br><br>"
             elif isinstance(item, dict) and "text" in item and "author" in item:
-                html_content += f"<p>\"{item['text']}\" - <em>{item['author']}</em></p>"
+                html_content += f"\"{item['text']}\" - {item['author']}<br><br>"
             elif isinstance(item, dict) and "testimonial" in item:
-                html_content += f"<p>\"{item['testimonial']}\"</p>"
-        html_content += "</blockquote>"
+                html_content += f"\"{item['testimonial']}\"<br><br>"
         data["testimonials"] = html_content
     
     # Upewnienie się, że wszystkie pola są stringami
@@ -114,6 +112,16 @@ def normalize_json_data(data):
             else:
                 data[key] = str(data[key])
     
+    # Usunięcie wszelkich niepotrzebnych divów i klas
+    for key in data:
+        if isinstance(data[key], str):
+            # Uproszczenie struktury HTML, usunięcie div z klasami
+            data[key] = re.sub(r'<div\s+class="[^"]*">(.*?)</div>', r'\1', data[key], flags=re.DOTALL)
+            # Usunięcie pozostałych divów
+            data[key] = re.sub(r'<div>(.*?)</div>', r'\1', data[key], flags=re.DOTALL)
+            # Usunięcie atrybutów class z innych tagów
+            data[key] = re.sub(r'<([a-z]+)\s+class="[^"]*"', r'<\1', data[key])
+    
     return data
 
 # Funkcja do generowania sekcji dla kwalifikacji autora, jeśli podano dane
@@ -121,9 +129,8 @@ def generate_author_credentials(author_info):
     if not author_info or author_info.strip() == "":
         return None
     
-    return f"""<div class="author-credentials">
-    {author_info}
-    </div>"""
+    # Zwracamy czysty tekst bez dodatkowego formatowania HTML
+    return author_info
 
 # Funkcja do wywołania API OpenAI
 def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", tone="przyjazny", lengths=None):
@@ -171,7 +178,7 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
             Wykorzystaj powyższe informacje by stworzyć przekonującą sekcję author_credentials.
             """
         
-        # Przygotowanie promptu dla OpenAI z naciskiem na wysoki standard marketingowy
+        # Przygotowanie promptu dla OpenAI z naciskiem na wysoki standard marketingowy i minimalne formatowanie
         prompt = f"""
         Przeanalizuj poniższy e-book i utwórz wysokiej jakości treści marketingowe dopasowane dla następującej persony:
         
@@ -214,10 +221,11 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
         - Pisz w drugiej osobie (Ty, Twój) aby stworzyć bezpośredni kontakt z czytelnikiem
         - Używaj aktywnych czasowników i unikaj strony biernej
         - NIE DODAWAJ TYTUŁÓW SEKCJI, tylko ich zawartość
-        - Dodaj odpowiednie znaczniki HTML dla formatowania (pogrubienie, kursywa, listy)
+        - UŻYWAJ TYLKO PODSTAWOWEGO FORMATOWANIA HTML - wyłącznie <strong>, <em>, <br>, <li> dla list oraz <ul> dla list punktowanych
+        - NIE DODAWAJ znaczników <div>, <span>, <p>, <blockquote>, <dl>, atrybutów 'class', 'id' lub jakichkolwiek innych elementów formatowania
         - Każda sekcja musi być starannie opracowana i dopasowana do potrzeb persony
         
-        Odpowiedź musi być w formacie JSON, używaj znaczników HTML dla formatowania.
+        Odpowiedź musi być w formacie JSON, używaj minimalnego formatowania HTML.
         WAŻNE: Zwróć TYLKO obiekt JSON bez dodatkowego tekstu przed lub po.
         """
         
@@ -618,25 +626,241 @@ def main():
                 st.markdown(get_copy_button_html(final_html), unsafe_allow_html=True)
                 
                 # Wyświetlenie informacji o dostępnych zmiennych
-                with st.expander("Dostępne zmienne do użycia w szablonie HTML", expanded=False):
-                    st.markdown("Poniżej znajduje się lista wszystkich dostępnych zmiennych, które możesz umieścić w swoim szablonie HTML:")
-                    variables_list = ""
-                    for key in json_data.keys():
-                        variables_list += f"- `{{!{{ {key} }}!}}` - {key.replace('_', ' ').title()}\n"
-                    st.markdown(variables_list)
-                    
-                    st.markdown("""
-                    ### Przykład użycia w HTML:
-                    ```html
-                    <div class="intro">
-                        {!{ intro }!}
-                    </div>
-                    
-                    <div class="call-to-action">
-                        {!{ call_to_action }!}
-                    </div>
-                    ```
-                    """)
+            with st.expander("Dostępne zmienne do użycia w szablonie HTML", expanded=False):
+                st.markdown("""
+                # Dokumentacja zmiennych
+                
+                Poniżej znajduje się lista wszystkich dostępnych zmiennych, które możesz umieścić w swoim szablonie HTML:
+                
+                | Zmienna | Opis | Format zawartości |
+                |---------|------|-------------------|
+                | `intro` | Wstęp — kontekst i problem odbiorcy | Akapit tekstu opisujący problem, który rozwiązuje e-book |
+                | `why_created` | Dlaczego powstał ten e-book | Akapit tekstu o motywacji i genezie powstania e-booka |
+                | `contents` | Co znajdziesz w środku e-booka | Lista HTML (ul/li) z punktami dotyczącymi zawartości |
+                | `problems_solved` | Problemy rozwiązywane przez e-book | Tekst opisujący wartość praktyczną i korzyści |
+                | `target_audience` | Dla kogo jest ten e-book | Opis grupy docelowej oraz kto nie jest odbiorcą |
+                | `example` | Fragment lub przykład z e-booka | Cytat lub mini-case z e-booka |
+                | `call_to_action` | Wezwanie do działania | Zwięzły, motywujący tekst zachęcający do pobrania/zakupu |
+                | `key_benefits` | Główne korzyści | Lista HTML (ul/li) z kluczowymi korzyściami |
+                | `guarantee` | Obietnica/gwarancja | Tekst z obietnicą wartości dla czytelnika |
+                | `testimonials` | Opinie użytkowników | Cytaty w formacie HTML (blockquote) z opiniami |
+                | `value_summary` | Podsumowanie wartości | Zwięzły tekst podsumowujący główne punkty i korzyści |
+                | `faq` | Najczęściej zadawane pytania | Format HTML (dl/dt/dd) z pytaniami i odpowiedziami |
+                | `urgency` | Element pilności/ograniczoności | Tekst budujący poczucie pilności decyzji |
+                | `comparison` | Porównanie z konkurencją | Tekst wyjaśniający, co wyróżnia ten e-book |
+                | `transformation_story` | Historia transformacji | Narracja pokazująca zmianę po zastosowaniu wiedzy z e-booka |
+                | `author_credentials` | Kwalifikacje autora | Opis autora, jego doświadczenia i wiedzy (opcjonalnie) |
+                
+                ### Przykłady użycia w HTML:
+                
+                ```html
+                <!-- Podstawowe użycie -->
+                <div class="intro">
+                    <h2>Wprowadzenie</h2>
+                    <p>{!{ intro }!}</p>
+                </div>
+                
+                <!-- Dla list (contents, key_benefits) -->
+                <div class="benefits">
+                    <h2>Korzyści z e-booka</h2>
+                    {!{ key_benefits }!}
+                </div>
+                
+                <!-- Dla opinii (testimonials) -->
+                <div class="testimonials-section">
+                    <h2>Co mówią nasi czytelnicy</h2>
+                    {!{ testimonials }!}
+                </div>
+                
+                <!-- Wezwanie do działania jako przycisk -->
+                <a href="#download" class="cta-button">
+                    {!{ call_to_action }!}
+                </a>
+                ```
+                
+                > **Uwaga**: Aby uzyskać pełną dokumentację zmiennych, zobacz [szczegółową dokumentację](https://github.com/twojerepo/dokumentacja-zmiennych).
+                """)
+                
+                st.download_button(
+                    label="Pobierz pełną dokumentację zmiennych",
+                    data="""# Dokumentacja zmiennych w generatorze treści marketingowych
+
+## Dostępne zmienne
+
+Poniżej znajduje się lista wszystkich zmiennych, które możesz umieścić w swoim szablonie HTML. Aby użyć zmiennej w szablonie, umieść ją w formacie `{!{ nazwa_zmiennej }!}`.
+
+| Zmienna | Opis | Format zawartości |
+|---------|------|-------------------|
+| `intro` | Wstęp — kontekst i problem odbiorcy | Akapit tekstu opisujący problem, który rozwiązuje e-book |
+| `why_created` | Dlaczego powstał ten e-book | Akapit tekstu o motywacji i genezie powstania e-booka |
+| `contents` | Co znajdziesz w środku e-booka | Lista HTML (ul/li) z punktami dotyczącymi zawartości |
+| `problems_solved` | Problemy rozwiązywane przez e-book | Tekst opisujący wartość praktyczną i korzyści |
+| `target_audience` | Dla kogo jest ten e-book | Opis grupy docelowej oraz kto nie jest odbiorcą |
+| `example` | Fragment lub przykład z e-booka | Cytat lub mini-case z e-booka |
+| `call_to_action` | Wezwanie do działania | Zwięzły, motywujący tekst zachęcający do pobrania/zakupu |
+| `key_benefits` | Główne korzyści | Lista HTML (ul/li) z kluczowymi korzyściami |
+| `guarantee` | Obietnica/gwarancja | Tekst z obietnicą wartości dla czytelnika |
+| `testimonials` | Opinie użytkowników | Cytaty w formacie HTML (blockquote) z opiniami |
+| `value_summary` | Podsumowanie wartości | Zwięzły tekst podsumowujący główne punkty i korzyści |
+| `faq` | Najczęściej zadawane pytania | Format HTML (dl/dt/dd) z pytaniami i odpowiedziami |
+| `urgency` | Element pilności/ograniczoności | Tekst budujący poczucie pilności decyzji |
+| `comparison` | Porównanie z konkurencją | Tekst wyjaśniający, co wyróżnia ten e-book |
+| `transformation_story` | Historia transformacji | Narracja pokazująca zmianę po zastosowaniu wiedzy z e-booka |
+| `author_credentials` | Kwalifikacje autora | Opis autora, jego doświadczenia i wiedzy (opcjonalnie) |
+
+## Przykłady użycia zmiennych
+
+### 1. Podstawowe użycie
+
+```html
+<div class="intro">
+    <h2>Wprowadzenie</h2>
+    <p>{!{ intro }!}</p>
+</div>
+
+<div class="benefits">
+    <h2>Korzyści z e-booka</h2>
+    {!{ key_benefits }!}
+</div>
+```
+
+### 2. Sekcja FAQ z formatowaniem
+
+```html
+<div class="faq-section">
+    <h2>Często zadawane pytania</h2>
+    <div class="faq-content">
+        {!{ faq }!}
+    </div>
+</div>
+```
+
+### 3. Rekomendacje i opinie
+
+```html
+<div class="testimonials-section">
+    <h2>Co mówią nasi czytelnicy</h2>
+    <div class="testimonials-slider">
+        {!{ testimonials }!}
+    </div>
+</div>
+```
+
+### 4. Wezwanie do działania jako przycisk
+
+```html
+<a href="#download" class="cta-button">
+    {!{ call_to_action }!}
+</a>
+```
+
+### 5. O autorze (z warunkiem)
+
+```html
+<div class="author-section">
+    <h2>O autorze</h2>
+    <div class="author-bio">
+        {!{ author_credentials }!}
+    </div>
+</div>
+```
+
+## Szczegółowy opis zmiennych
+
+### intro
+Zawiera kontekst problemu, z którym boryka się odbiorca. Jest to kluczowa sekcja, która powinna przykuć uwagę czytelnika i pokazać, że rozumiesz jego potrzeby.
+
+### why_created
+Wyjaśnia genezę powstania e-booka, inspirację autora i powód, dla którego postanowił podzielić się tą wiedzą. Buduje relację i zaufanie z czytelnikiem.
+
+### contents
+Przedstawia spis treści lub kluczowe rozdziały e-booka. Jest to lista z krótkimi opisami, która daje czytelnikowi przegląd zawartości. Zawsze jest generowana jako lista HTML (ul/li).
+
+### problems_solved
+Opisuje, jakie konkretne problemy rozwiązuje e-book. Koncentruje się na praktycznych korzyściach i efektach, które czytelnik może osiągnąć dzięki zawartej wiedzy.
+
+### target_audience
+Precyzyjnie określa, dla kogo jest przeznaczony e-book, a także dla kogo nie jest odpowiedni. Pomaga potencjalnemu czytelnikowi zdecydować, czy treść jest dla niego odpowiednia.
+
+### example
+Prezentuje fragment lub przykład z e-booka, który pokazuje styl i wartość zawartej wiedzy. Działa jak "próbka" treści.
+
+### call_to_action
+Mocne, bezpośrednie wezwanie do działania, które zachęca czytelnika do pobrania lub zakupu e-booka. Jest zwykle krótkie i dynamiczne.
+
+### key_benefits
+Lista głównych korzyści, które czytelnik uzyska po przeczytaniu e-booka. Koncentruje się na pozytywnych rezultatach, używając formatowania punktowego (lista ul/li).
+
+### guarantee
+Zawiera obietnicę lub gwarancję wartości, którą czytelnik otrzyma. Zwiększa poczucie bezpieczeństwa i redukuje ryzyko związane z pobieraniem/zakupem.
+
+### testimonials
+Prezentuje opinie zadowolonych czytelników (hipotetyczne lub rzeczywiste). Jest to społeczny dowód słuszności, zwiększający wiarygodność. Zwykle generowany jako HTML z elementami blockquote.
+
+### value_summary
+Zwięzłe podsumowanie wszystkich najważniejszych punktów i korzyści. Pomaga utrwalić kluczowe informacje i ponownie zachęca do działania.
+
+### faq
+Najczęściej zadawane pytania wraz z odpowiedziami, które rozwiewają wątpliwości potencjalnych czytelników. Generowane jako definicje HTML (dl/dt/dd).
+
+### urgency
+Element budujący poczucie, że warto podjąć decyzję teraz. Może to być ograniczona dostępność, szczególna aktualność tematu itp.
+
+### comparison
+Wyjaśnia, co wyróżnia ten e-book spośród innych materiałów na ten temat. Pomaga wyróżnić ofertę na tle konkurencji.
+
+### transformation_story
+Krótka historia pokazująca transformację/zmianę, jaką przeszedł ktoś dzięki wiedzy zawartej w e-booku. Pomaga czytelnikowi wyobrazić sobie potencjalne korzyści.
+
+### author_credentials
+Informacje o autorze, jego doświadczeniu, kwalifikacjach i osiągnięciach. Opcjonalna sekcja, która zwiększa wiarygodność materiału.
+
+## Zalecane formatowanie HTML dla zmiennych
+
+### Dla list (contents, key_benefits)
+```html
+<ul>
+    <li><strong>Punkt 1:</strong> Opis punktu 1</li>
+    <li><strong>Punkt 2:</strong> Opis punktu 2</li>
+    <li><strong>Punkt 3:</strong> Opis punktu 3</li>
+</ul>
+```
+
+### Dla opinii (testimonials)
+```html
+<blockquote>
+    <p>"Cytat z opinii użytkownika."</p>
+    <footer>— <cite>Imię i nazwisko, stanowisko</cite></footer>
+</blockquote>
+```
+
+### Dla FAQ
+```html
+<dl>
+    <dt>Pytanie 1?</dt>
+    <dd>Odpowiedź na pytanie 1...</dd>
+    <dt>Pytanie 2?</dt>
+    <dd>Odpowiedź na pytanie 2...</dd>
+</dl>
+```
+
+### Dla call_to_action (jako przycisk)
+```html
+<a href="#" class="cta-button">POBIERZ TERAZ</a>
+```
+
+## Wskazówki dotyczące użycia zmiennych
+
+1. **Zachowaj spójność wizualną** - używaj podobnego stylu formatowania dla powiązanych sekcji
+2. **Podkreślaj najważniejsze punkty** - używaj pogrubienia i kursywy dla kluczowych elementów
+3. **Zróżnicuj długość sekcji** - mieszaj krótkie, dynamiczne sekcje z dłuższymi, bardziej opisowymi
+4. **Twórz wizualną hierarchię** - używaj nagłówków, list i innych elementów formatowania
+5. **Testuj różne kombinacje** - eksperymentuj z różnymi układami i kolejnością sekcji
+6. **Użyj kolorów i kontrastów** - wyróżnij ważne sekcje jak call_to_action i urgency
+7. **Dostosuj do swojej marki** - zachowaj spójność z identyfikacją wizualną swojej marki""",
+                    file_name="zmienne-marketing-dokumentacja.md",
+                    mime="text/markdown",
+                )
             else:
                 progress_text.text("Wystąpił błąd podczas analizy.")
                 progress_bar.empty()
