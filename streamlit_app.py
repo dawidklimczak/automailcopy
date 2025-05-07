@@ -9,29 +9,45 @@ from jsonschema import validate, ValidationError
 
 # Konfiguracja strony
 st.set_page_config(
-    page_title="Generator treści marketingowych dla e-booków",
+    page_title="Generator treści marketingowych do maili,
     layout="wide"
 )
 
 # Lista wszystkich dostępnych zmiennych z opisami
 ALL_VARIABLES = {
-    "intro": "Wstęp — kontekst i problem odbiorcy",
-    "why_created": "Dlaczego powstał ten ebook",
-    "contents": "Co znajdziesz w środku (spis treści / kluczowe rozdziały)",
-    "problems_solved": "Jakie problemy rozwiązuje (wartość praktyczna)",
-    "target_audience": "Dla kogo jest ten ebook (i dla kogo nie)",
-    "example": "Fragment lub przykład z ebooka",
-    "call_to_action": "Wezwanie do działania, zachęta do pobrania/zakupu",
-    "key_benefits": "Lista głównych korzyści z przeczytania e-booka",
-    "guarantee": "Obietnica wartości, gwarancja rezultatów",
-    "testimonials": "Opinie czytelników, społeczny dowód słuszności",
-    "value_summary": "Podsumowanie najważniejszych punktów i korzyści",
-    "faq": "Najczęściej zadawane pytania z odpowiedziami",
-    "urgency": "Element budujący poczucie pilności decyzji",
-    "comparison": "Co wyróżnia ten e-book na tle konkurencji",
-    "transformation_story": "Historia transformacji dzięki wiedzy z e-booka",
-    "author_credentials": "Kwalifikacje autora (opcjonalne)"
+    "intro": "Wstęp — akapit otwierający, prezentuje kontekst sytuacyjny odbiorcy i główny problem, bez podawania nazwy e-booka ani zachęty do zakupu",
+
+    "why_created": "Cel powstania e-booka — precyzyjne wskazanie luki rynkowej lub potrzeby edukacyjnej, wyjaśnienie motywacji autora lub zespołu, bez użycia pierwszej osoby liczby pojedynczej",
+
+    "contents": "Zawartość e-booka — szczegółowy spis kluczowych rozdziałów, modułów, dodatków lub checklist wraz z krótkimi opisami, umożliwiający szybkie zrozumienie struktury materiału",
+
+    "problems_solved": "Problemy rozwiązane — jednoznaczna lista bolączek eliminowanych dzięki treści, sformułowana w języku korzyści mierzalnych dla odbiorcy",
+
+    "target_audience": "Grupa docelowa — jasne wskazanie, kto skorzysta z publikacji oraz komu może ona nie przynieść wartości, z podaniem konkretnych cech lub poziomu zaawansowania",
+
+    "example": "Przykład z e-booka — cytowany fragment, kod, tabela lub ilustracja prezentująca styl oraz praktyczną wartość materiału",
+
+    "call_to_action": "Wezwanie do działania — pojedynczy, zwięzły komunikat w trybie rozkazującym, zachęcający do pobrania lub zakupu, ewentualnie z elementem limitu czasowego lub ilościowego",
+
+    "key_benefits": "Główne korzyści — uporządkowany zbiór konkretnych efektów, jakie czytelnik osiągnie po wdrożeniu wiedzy, pisany językiem rezultatów, nie cech produktu",
+
+    "guarantee": "Gwarancja jakości — jednoznaczna deklaracja dotycząca wartości merytorycznej lub możliwości zwrotu, eliminująca ryzyko po stronie klienta",
+
+    "testimonials": "Opinie — autentyczne cytaty czytelników lub ekspertów, opatrzone imieniem, stanowiskiem lub firmą i odnoszące się bezpośrednio do efektów osiągniętych dzięki e-bookowi",
+
+    "value_summary": "Podsumowanie wartości — syntetyczne zestawienie najważniejszych punktów i korzyści zamykające treść oferty, przygotowujące odbiorcę do finalnego CTA",
+
+    "faq": "FAQ — lista najczęściej stawianych pytań z klarownymi odpowiedziami rozwiewającymi wątpliwości dotyczące zawartości, formatu i procesu zakupu",
+
+    "urgency": "Pilność — wyraźna informacja o ograniczeniu czasowym, ilościowym lub cenowym, budująca presję szybkiej decyzji bez użycia scenariuszy straszenia",
+
+    "comparison": "Porównanie — przejrzyste zestawienie przewag e-booka nad alternatywnymi rozwiązaniami, wskazujące unikalne cechy oraz mierzalne różnice",
+
+    "transformation_story": "Historia transformacji — opis stanu przed oraz po zastosowaniu wiedzy z e-booka z uwzględnieniem konkretnych metryk lub rezultatów",
+
+    "author_credentials": "Kwalifikacje autora — fakty potwierdzające kompetencje, takie jak doświadczenie branżowe, liczba zrealizowanych projektów lub uzyskane certyfikaty"
 }
+
 
 # Funkcja do odczytywania zawartości pliku PDF
 def read_pdf(pdf_file):
@@ -586,7 +602,7 @@ def main():
     st.sidebar.header("Konfiguracja")
     openai_model = st.sidebar.selectbox(
         "Model OpenAI",
-        ["o4-mini", "gpt-4", "gpt-3.5-turbo"],
+        ["o4-mini", "gpt-4", "gpt-4o"],
         index=0,
         help="Wybierz model OpenAI"
     )
