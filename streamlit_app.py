@@ -15,39 +15,23 @@ st.set_page_config(
 
 # Lista wszystkich dostępnych zmiennych z opisami
 ALL_VARIABLES = {
-    "intro": "Wstęp — akapit otwierający, prezentuje kontekst sytuacyjny odbiorcy i główny problem, bez podawania nazwy e-booka ani zachęty do zakupu",
-
-    "why_created": "Cel powstania e-booka — precyzyjne wskazanie luki rynkowej lub potrzeby edukacyjnej, wyjaśnienie motywacji autora lub zespołu, bez użycia pierwszej osoby liczby pojedynczej",
-
-    "contents": "Zawartość e-booka — szczegółowy spis kluczowych rozdziałów, modułów, dodatków lub checklist wraz z krótkimi opisami, umożliwiający szybkie zrozumienie struktury materiału",
-
-    "problems_solved": "Problemy rozwiązane — jednoznaczna lista bolączek eliminowanych dzięki treści, sformułowana w języku korzyści mierzalnych dla odbiorcy",
-
-    "target_audience": "Grupa docelowa — jasne wskazanie, kto skorzysta z publikacji oraz komu może ona nie przynieść wartości, z podaniem konkretnych cech lub poziomu zaawansowania",
-
-    "example": "Przykład z e-booka — cytowany fragment, kod, tabela lub ilustracja prezentująca styl oraz praktyczną wartość materiału",
-
-    "call_to_action": "Wezwanie do działania — pojedynczy, zwięzły komunikat w trybie rozkazującym, zachęcający do pobrania lub zakupu, ewentualnie z elementem limitu czasowego lub ilościowego",
-
-    "key_benefits": "Główne korzyści — uporządkowany zbiór konkretnych efektów, jakie czytelnik osiągnie po wdrożeniu wiedzy, pisany językiem rezultatów, nie cech produktu",
-
-    "guarantee": "Gwarancja jakości — jednoznaczna deklaracja dotycząca wartości merytorycznej lub możliwości zwrotu, eliminująca ryzyko po stronie klienta",
-
-    "testimonials": "Opinie — autentyczne cytaty czytelników lub ekspertów, opatrzone imieniem, stanowiskiem lub firmą i odnoszące się bezpośrednio do efektów osiągniętych dzięki e-bookowi",
-
-    "value_summary": "Podsumowanie wartości — syntetyczne zestawienie najważniejszych punktów i korzyści zamykające treść oferty, przygotowujące odbiorcę do finalnego CTA",
-
-    "faq": "FAQ — lista najczęściej stawianych pytań z klarownymi odpowiedziami rozwiewającymi wątpliwości dotyczące zawartości, formatu i procesu zakupu",
-
-    "urgency": "Pilność — wyraźna informacja o ograniczeniu czasowym, ilościowym lub cenowym, budująca presję szybkiej decyzji bez użycia scenariuszy straszenia",
-
-    "comparison": "Porównanie — przejrzyste zestawienie przewag e-booka nad alternatywnymi rozwiązaniami, wskazujące unikalne cechy oraz mierzalne różnice",
-
-    "transformation_story": "Historia transformacji — opis stanu przed oraz po zastosowaniu wiedzy z e-booka z uwzględnieniem konkretnych metryk lub rezultatów",
-
-    "author_credentials": "Kwalifikacje autora — fakty potwierdzające kompetencje, takie jak doświadczenie branżowe, liczba zrealizowanych projektów lub uzyskane certyfikaty"
+    "intro": "Wstęp — kontekst i problem odbiorcy",
+    "why_created": "Dlaczego powstał ten ebook",
+    "contents": "Co znajdziesz w środku (spis treści / kluczowe rozdziały)",
+    "problems_solved": "Jakie problemy rozwiązuje (wartość praktyczna)",
+    "target_audience": "Dla kogo jest ten ebook (i dla kogo nie)",
+    "example": "Fragment lub przykład z ebooka",
+    "call_to_action": "Wezwanie do działania, zachęta do pobrania/zakupu",
+    "key_benefits": "Lista głównych korzyści z przeczytania e-booka",
+    "guarantee": "Obietnica wartości, gwarancja rezultatów",
+    "testimonials": "Opinie czytelników, społeczny dowód słuszności",
+    "value_summary": "Podsumowanie najważniejszych punktów i korzyści",
+    "faq": "Najczęściej zadawane pytania z odpowiedziami",
+    "urgency": "Element budujący poczucie pilności decyzji",
+    "comparison": "Co wyróżnia ten e-book na tle konkurencji",
+    "transformation_story": "Historia transformacji dzięki wiedzy z e-booka",
+    "author_credentials": "Kwalifikacje autora (opcjonalne)"
 }
-
 
 # Funkcja do odczytywania zawartości pliku PDF
 def read_pdf(pdf_file):
@@ -209,6 +193,123 @@ def generate_author_credentials(author_info, model="o4-mini", api_key=None):
         # W przypadku błędu, zwróć oryginalne dane
         st.warning(f"Nie udało się przetworzyć informacji o autorze. Używam oryginalnych danych.")
         return author_info
+
+# Funkcja do ponownego generowania pojedynczej sekcji
+def regenerate_single_section(pdf_text, persona, section_name, author_info="", model="o4-mini", tone="przyjazny", length=300):
+    try:
+        # Sprawdzenie, czy klucz API OpenAI jest ustawiony
+        api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+        if not api_key:
+            st.error("Brak klucza API OpenAI. Ustaw zmienną środowiskową OPENAI_API_KEY lub dodaj ją do sekretu Streamlit.")
+            return None
+        
+        # Inicjalizacja klienta OpenAI
+        client = OpenAI(api_key=api_key)
+        
+        # Dostosowanie tonu komunikacji
+        tone_instruction = ""
+        if tone == "profesjonalny":
+            tone_instruction = "Użyj rzeczowego, uprzejmego języka, bez emocjonalnych wyrażeń. Zachowaj profesjonalny ton."
+        elif tone == "przyjazny":
+            tone_instruction = "Użyj ciepłego, osobistego i otwartego języka. Bądź przyjazny i bezpośredni."
+        elif tone == "zabawny":
+            tone_instruction = "Użyj lekkiego, żartobliwego języka z elementami humoru. Nie przesadzaj, ale bądź zabawny."
+        elif tone == "motywujący":
+            tone_instruction = "Użyj inspirującego, podnoszącego na duchu języka. Zachęcaj i motywuj czytelnika."
+        elif tone == "poważny":
+            tone_instruction = "Użyj formalnego, zdystansowanego i neutralnego języka. Zachowaj powagę i oficjalny ton."
+        elif tone == "empatyczny":
+            tone_instruction = "Użyj wspierającego języka, który pokazuje zrozumienie dla emocji i potrzeb odbiorcy."
+        
+        # Specjalny przypadek dla informacji o autorze
+        if section_name == "author_credentials" and author_info:
+            return generate_author_credentials(author_info, model=model, api_key=api_key)
+        
+        # Opis dla wybranej sekcji
+        section_description = ALL_VARIABLES.get(section_name, "Sekcja treści marketingowej")
+        
+        # Przygotowanie promptu dla OpenAI - tylko dla jednej sekcji
+        prompt = f"""
+        Przeanalizuj poniższy e-book i utwórz wysokiej jakości treść marketingową dla JEDNEJ sekcji.
+        
+        PERSONA:
+        {persona}
+        
+        TON KOMUNIKACJI:
+        {tone_instruction}
+        
+        WYMAGANA SEKCJA:
+        {section_name} - {section_description}
+        Długość: około {length} znaków
+        
+        TREŚĆ E-BOOKA:
+        {pdf_text}
+        
+        WAŻNE WSKAZÓWKI DLA TWORZENIA TREŚCI:
+        - Stwórz treść, która jest WYSOCE ANGAŻUJĄCA i PRZEKONUJĄCA marketingowo
+        - Używaj języka, który wzbudza emocje i zainteresowanie
+        - Zastosuj konkretne, obrazowe przykłady i opisy
+        - Wykorzystaj krótkie, dynamiczne zdania naprzemiennie z bardziej złożonymi
+        - Podkreśl unikalne korzyści i wartość, wykorzystaj tzw. "unique selling points"
+        - Pisz w drugiej osobie (Ty, Twój) aby stworzyć bezpośredni kontakt z czytelnikiem
+        - Używaj aktywnych czasowników i unikaj strony biernej
+        - NIE DODAWAJ TYTUŁÓW SEKCJI, tylko jej zawartość
+        - UŻYWAJ TYLKO PODSTAWOWEGO FORMATOWANIA HTML - wyłącznie <strong>, <em>, <br>, <li> dla list oraz <ul> dla list punktowanych
+        - NIE DODAWAJ znaczników <div>, <span>, <p>, <blockquote>, <dl>, atrybutów 'class', 'id' lub jakichkolwiek innych elementów formatowania
+        
+        Zwróć TYLKO treść sekcji, bez dodatkowego tekstu przed lub po, bez nazwy sekcji, bez formatowania JSON.
+        """
+        
+        # Wywołanie API OpenAI
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Jesteś ekspertem w tworzeniu najwyższej klasy treści marketingowych i perswazyjnych."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        # Pobierz treść odpowiedzi
+        content = response.choices[0].message.content.strip()
+        
+        # Usuń ewentualne tytuły sekcji
+        title_pattern = {
+            "intro": r'^(Wstęp|Wprowadzenie|Kontekst)[:;-]\s*',
+            "why_created": r'^(Dlaczego|Geneza|Powód)[:;-]\s*',
+            "contents": r'^(Zawartość|Spis treści|Co znajdziesz)[:;-]\s*',
+            "problems_solved": r'^(Problemy|Rozwiązania|Korzyści)[:;-]\s*',
+            "target_audience": r'^(Dla kogo|Odbiorcy|Grupa docelowa)[:;-]\s*',
+            "example": r'^(Przykład|Fragment|Cytat)[:;-]\s*',
+            "call_to_action": r'^(Wezwanie|CTA|Działaj|Zrób)[:;-]\s*',
+            "key_benefits": r'^(Korzyści|Zalety|Benefity)[:;-]\s*',
+            "guarantee": r'^(Gwarancja|Obietnica|Zapewnienie)[:;-]\s*',
+            "testimonials": r'^(Opinie|Rekomendacje|Co mówią)[:;-]\s*',
+            "value_summary": r'^(Podsumowanie|Wartość|W skrócie)[:;-]\s*',
+            "faq": r'^(FAQ|Pytania|Q&A)[:;-]\s*',
+            "urgency": r'^(Pilne|Ogranicz|Nie czekaj)[:;-]\s*',
+            "comparison": r'^(Porównanie|Wyróżnienie|Co nas wyróżnia)[:;-]\s*',
+            "transformation_story": r'^(Historia|Transformacja|Zmiana|Case study)[:;-]\s*'
+        }
+        
+        if section_name in title_pattern:
+            content = re.sub(title_pattern[section_name], '', content, flags=re.IGNORECASE)
+        
+        # Formatowanie specjalne dla list
+        if section_name == "contents" and "<ul>" not in content and "<li>" not in content:
+            lines = content.split("\n")
+            if len(lines) > 1:
+                content = "<ul>" + "".join([f"<li>{line.strip()}</li>" for line in lines if line.strip()]) + "</ul>"
+        
+        if section_name == "key_benefits" and "<ul>" not in content and "<li>" not in content:
+            lines = content.split("\n")
+            if len(lines) > 1:
+                content = "<ul>" + "".join([f"<li>{line.strip()}</li>" for line in lines if line.strip()]) + "</ul>"
+        
+        return content
+    
+    except Exception as e:
+        st.error(f"Błąd podczas generowania sekcji {section_name}: {e}")
+        return None
 
 # Funkcja do wywołania API OpenAI dla wymaganych zmiennych
 def analyze_pdf_with_openai(pdf_text, persona, required_variables, author_info="", model="o4-mini", tone="przyjazny", lengths=None):
@@ -423,6 +524,15 @@ def init_session_state():
     
     if "required_variables" not in st.session_state:
         st.session_state.required_variables = set()
+    
+    if "pdf_text" not in st.session_state:
+        st.session_state.pdf_text = None
+    
+    if "persona" not in st.session_state:
+        st.session_state.persona = None
+    
+    if "author_info" not in st.session_state:
+        st.session_state.author_info = None
         
     # Inicjalizacja domyślnych długości dla zmiennych
     if "var_lengths" not in st.session_state:
@@ -574,6 +684,7 @@ def main():
     - **Empatyczny** – wspierający, rozumiejący emocje odbiorcy
     """)
     
+    # Formularz główny
     with st.form("input_form"):
         # Upload pliku PDF
         uploaded_file = st.file_uploader("Wybierz plik PDF z e-bookiem", type="pdf")
@@ -604,6 +715,11 @@ def main():
         
         # Odczytanie zawartości PDF
         pdf_text = read_pdf(uploaded_file)
+        
+        # Zapisz dane do sesji dla późniejszego użycia przy regeneracji
+        st.session_state.pdf_text = pdf_text
+        st.session_state.persona = persona
+        st.session_state.author_info = author_info
         
         if pdf_text:
             progress_bar.progress(20)
@@ -693,11 +809,44 @@ def main():
                             # Dla każdej zmiennej w grupie
                             for var in group_vars:
                                 if var in json_data:
-                                    edited_json[var] = st.text_area(
-                                        f"{var.replace('_', ' ').title()}", 
-                                        json_data[var], 
-                                        height=200
-                                    )
+                                    # Dodajemy dwa kolumny: jedna na edytor tekstu, druga na przycisk regeneracji
+                                    col1, col2 = st.columns([4, 1])
+                                    
+                                    with col1:
+                                        edited_json[var] = st.text_area(
+                                            f"{var.replace('_', ' ').title()}", 
+                                            json_data[var], 
+                                            height=200
+                                        )
+                                    
+                                    with col2:
+                                        # Przycisk do regeneracji tylko tej sekcji
+                                        regenerate_btn = st.button(
+                                            "🔄 Wygeneruj ponownie", 
+                                            key=f"regenerate_{var}",
+                                            help=f"Wygeneruj ponownie tylko sekcję '{var.replace('_', ' ').title()}'"
+                                        )
+                                        
+                                        if regenerate_btn:
+                                            # Wyświetl komunikat o regeneracji
+                                            with st.spinner(f"Regeneruję sekcję {var.replace('_', ' ').title()}..."):
+                                                # Regeneruj tylko tę sekcję
+                                                new_content = regenerate_single_section(
+                                                    pdf_text=st.session_state.pdf_text,
+                                                    persona=st.session_state.persona,
+                                                    section_name=var,
+                                                    author_info=st.session_state.author_info if var == "author_credentials" else "",
+                                                    model=openai_model,
+                                                    tone=tone,
+                                                    length=st.session_state.var_lengths.get(var, 300)
+                                                )
+                                                
+                                                if new_content:
+                                                    # Aktualizuj dane w sesji
+                                                    st.session_state.current_json_data[var] = new_content
+                                                    # Odśwież stronę aby pokazać nowe dane
+                                                    st.experimental_rerun()
+                        
                         tab_index += 1
                 
                 # Zastosowanie zmian
@@ -764,6 +913,145 @@ def main():
             else:
                 progress_text.text("Wystąpił błąd podczas analizy.")
                 progress_bar.empty()
+    
+    elif st.session_state.current_json_data is not None:
+        # Jeśli już mamy wygenerowane dane, wyświetl je ponownie
+        
+        # Wyświetlenie edytora wygenerowanych treści
+        st.subheader("Edytuj wygenerowane treści:")
+        
+        # Podziel zmienne na grupy dla lepszej organizacji
+        variable_groups = {
+            "Podstawowe informacje": ["intro", "why_created", "contents", "problems_solved", "target_audience", "example"],
+            "Korzyści i wartość": ["key_benefits", "guarantee", "value_summary", "comparison"],
+            "Elementy perswazyjne": ["call_to_action", "testimonials", "urgency", "transformation_story"],
+            "Dodatkowe elementy": ["faq", "author_credentials"]
+        }
+        
+        # Pobierz wymagane zmienne z sesji
+        required_variables = st.session_state.required_variables
+        
+        # Utworzenie zakładek dla grup
+        group_names = []
+        for group_name, vars_in_group in variable_groups.items():
+            # Sprawdź, czy grupa zawiera jakiekolwiek wymagane zmienne
+            if any(var in required_variables for var in vars_in_group):
+                group_names.append(group_name)
+        
+        group_tabs = st.tabs(group_names)
+        
+        # Dla każdej grupy
+        edited_json = {}
+        tab_index = 0
+        
+        for group_name, vars_in_group in variable_groups.items():
+            # Jeśli grupa zawiera wymagane zmienne
+            group_vars = [var for var in vars_in_group if var in required_variables]
+            if group_vars:
+                with group_tabs[tab_index]:
+                    # Dla każdej zmiennej w grupie
+                    for var in group_vars:
+                        if var in st.session_state.current_json_data:
+                            # Dodajemy dwie kolumny: jedna na edytor tekstu, druga na przycisk regeneracji
+                            col1, col2 = st.columns([4, 1])
+                            
+                            with col1:
+                                edited_json[var] = st.text_area(
+                                    f"{var.replace('_', ' ').title()}", 
+                                    st.session_state.current_json_data[var], 
+                                    height=200
+                                )
+                            
+                            with col2:
+                                # Przycisk do regeneracji tylko tej sekcji
+                                regenerate_btn = st.button(
+                                    "🔄 Wygeneruj ponownie", 
+                                    key=f"regenerate_{var}",
+                                    help=f"Wygeneruj ponownie tylko sekcję '{var.replace('_', ' ').title()}'"
+                                )
+                                
+                                if regenerate_btn:
+                                    # Wyświetl komunikat o regeneracji
+                                    with st.spinner(f"Regeneruję sekcję {var.replace('_', ' ').title()}..."):
+                                        # Regeneruj tylko tę sekcję
+                                        new_content = regenerate_single_section(
+                                            pdf_text=st.session_state.pdf_text,
+                                            persona=st.session_state.persona,
+                                            section_name=var,
+                                            author_info=st.session_state.author_info if var == "author_credentials" else "",
+                                            model=openai_model,
+                                            tone=tone,
+                                            length=st.session_state.var_lengths.get(var, 300)
+                                        )
+                                        
+                                        if new_content:
+                                            # Aktualizuj dane w sesji
+                                            st.session_state.current_json_data[var] = new_content
+                                            # Odśwież stronę aby pokazać nowe dane
+                                            st.experimental_rerun()
+                
+                tab_index += 1
+        
+        # Zastosowanie zmian
+        apply_changes = st.button("Zastosuj zmiany")
+        if apply_changes:
+            # Upewnij się, że wszystkie klucze są zachowane
+            for key in st.session_state.current_json_data:
+                if key not in edited_json:
+                    edited_json[key] = st.session_state.current_json_data[key]
+            
+            st.session_state.current_json_data = edited_json
+            st.success("Zmiany zostały zastosowane!")
+        
+        # Podstawienie wartości w kreacji mailowej (jeśli szablon jest dostępny)
+        if "current_html" in st.session_state and st.session_state.current_html:
+            final_html = st.session_state.current_html
+            
+            # Podgląd kreacji
+            st.subheader("Podgląd kreacji:")
+            
+            # Przygotowanie HTML z CSS
+            html_with_style = f"""
+            <style>
+            body {{
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 20px;
+                max-width: 800px;
+            }}
+            h1, h2, h3, h4, h5, h6 {{
+                color: #2c3e50;
+                margin-top: 1.5em;
+                margin-bottom: 0.5em;
+            }}
+            p {{
+                margin-bottom: 1em;
+            }}
+            ul, ol {{
+                margin-bottom: 1em;
+                padding-left: 2em;
+            }}
+            blockquote {{
+                border-left: 4px solid #ddd;
+                padding: 0.5em 1em;
+                margin: 1em 0;
+                background-color: #f9f9f9;
+            }}
+            </style>
+            {final_html}
+            """
+            
+            # Używamy st.components.v1.html
+            st.components.v1.html(html_with_style, height=600, scrolling=True)
+            
+            # Wyświetlenie końcowej kreacji (kod HTML)
+            with st.expander("Pokaż kod HTML", expanded=False):
+                st.code(final_html, language="html")
+            
+            # Przycisk do kopiowania kodu
+            st.subheader("Kopiuj kod do schowka:")
+            st.markdown(get_copy_button_html(final_html), unsafe_allow_html=True)
     
     elif analyze_button:
         st.warning("Proszę wypełnić wszystkie wymagane pola formularza i dodać plik PDF.")
