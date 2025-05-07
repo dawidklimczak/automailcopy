@@ -13,31 +13,24 @@ st.set_page_config(
     layout="wide"
 )
 
-# Definicja schematu JSON - dodane nowe sekcje
-JSON_SCHEMA = {
-    "type": "object",
-    "required": [
-        "intro", "why_created", "contents", "problems_solved", "target_audience", 
-        "example", "call_to_action", "key_benefits", "guarantee", "testimonials", 
-        "value_summary", "faq", "urgency", "comparison", "transformation_story"
-    ],
-    "properties": {
-        "intro": {"type": "string", "description": "Wstęp — kontekst i problem odbiorcy"},
-        "why_created": {"type": "string", "description": "Dlaczego powstał ten ebook"},
-        "contents": {"type": "string", "description": "Co znajdziesz w środku (spis treści / kluczowe rozdziały)"},
-        "problems_solved": {"type": "string", "description": "Jakie problemy rozwiązuje (wartość praktyczna)"},
-        "target_audience": {"type": "string", "description": "Dla kogo jest ten ebook (i dla kogo nie)"},
-        "example": {"type": "string", "description": "Fragment lub przykład z ebooka"},
-        "call_to_action": {"type": "string", "description": "Wezwanie do działania, zachęta do pobrania/zakupu"},
-        "key_benefits": {"type": "string", "description": "Lista głównych korzyści z przeczytania e-booka"},
-        "guarantee": {"type": "string", "description": "Obietnica wartości, gwarancja rezultatów"},
-        "testimonials": {"type": "string", "description": "Opinie czytelników, społeczny dowód słuszności"},
-        "value_summary": {"type": "string", "description": "Podsumowanie najważniejszych punktów i korzyści"},
-        "faq": {"type": "string", "description": "Najczęściej zadawane pytania z odpowiedziami"},
-        "urgency": {"type": "string", "description": "Element budujący poczucie pilności decyzji"},
-        "comparison": {"type": "string", "description": "Co wyróżnia ten e-book na tle konkurencji"},
-        "transformation_story": {"type": "string", "description": "Historia transformacji dzięki wiedzy z e-booka"}
-    }
+# Lista wszystkich dostępnych zmiennych z opisami
+ALL_VARIABLES = {
+    "intro": "Wstęp — kontekst i problem odbiorcy",
+    "why_created": "Dlaczego powstał ten ebook",
+    "contents": "Co znajdziesz w środku (spis treści / kluczowe rozdziały)",
+    "problems_solved": "Jakie problemy rozwiązuje (wartość praktyczna)",
+    "target_audience": "Dla kogo jest ten ebook (i dla kogo nie)",
+    "example": "Fragment lub przykład z ebooka",
+    "call_to_action": "Wezwanie do działania, zachęta do pobrania/zakupu",
+    "key_benefits": "Lista głównych korzyści z przeczytania e-booka",
+    "guarantee": "Obietnica wartości, gwarancja rezultatów",
+    "testimonials": "Opinie czytelników, społeczny dowód słuszności",
+    "value_summary": "Podsumowanie najważniejszych punktów i korzyści",
+    "faq": "Najczęściej zadawane pytania z odpowiedziami",
+    "urgency": "Element budujący poczucie pilności decyzji",
+    "comparison": "Co wyróżnia ten e-book na tle konkurencji",
+    "transformation_story": "Historia transformacji dzięki wiedzy z e-booka",
+    "author_credentials": "Kwalifikacje autora (opcjonalne)"
 }
 
 # Funkcja do odczytywania zawartości pliku PDF
@@ -56,6 +49,37 @@ def read_pdf(pdf_file):
     except Exception as e:
         st.error(f"Błąd podczas odczytywania pliku PDF: {e}")
         return None
+
+# Funkcja do analizy szablonu HTML i znalezienia używanych zmiennych
+def extract_variables_from_template(html_template):
+    # Wzór do wykrywania zmiennych w formie {!{ nazwa_zmiennej }!}
+    pattern = r'\{!\{\s*([a-zA-Z_]+)\s*\}!\}'
+    
+    # Znajdź wszystkie wystąpienia zmiennych
+    matches = re.findall(pattern, html_template)
+    
+    # Utwórz unikalny zbiór zmiennych (eliminując duplikaty)
+    unique_variables = set(matches)
+    
+    return unique_variables
+
+# Funkcja do dynamicznego tworzenia schematu JSON na podstawie wymaganych zmiennych
+def create_dynamic_json_schema(required_variables):
+    schema = {
+        "type": "object",
+        "required": list(required_variables),
+        "properties": {}
+    }
+    
+    # Dodanie właściwości dla każdej wymaganej zmiennej
+    for var in required_variables:
+        if var in ALL_VARIABLES:
+            schema["properties"][var] = {
+                "type": "string", 
+                "description": ALL_VARIABLES[var]
+            }
+    
+    return schema
 
 # Funkcja do obsługi specjalnych przypadków formatu danych
 def normalize_json_data(data):
@@ -124,16 +148,54 @@ def normalize_json_data(data):
     
     return data
 
-# Funkcja do generowania sekcji dla kwalifikacji autora, jeśli podano dane
-def generate_author_credentials(author_info):
+# Funkcja do generowania sekcji dla kwalifikacji autora
+def generate_author_credentials(author_info, model="o4-mini", api_key=None):
     if not author_info or author_info.strip() == "":
         return None
     
-    # Zwracamy czysty tekst bez dodatkowego formatowania HTML
-    return author_info
+    try:
+        # Sprawdzenie, czy klucz API OpenAI jest ustawiony
+        if not api_key:
+            api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+            if not api_key:
+                return author_info  # Fallback do oryginalnych danych
+        
+        # Inicjalizacja klienta OpenAI
+        client = OpenAI(api_key=api_key)
+        
+        # Prompt dla AI do przetworzenia informacji o autorze
+        prompt = f"""
+        Na podstawie poniższych surowych informacji o autorze, stwórz profesjonalny, 
+        angażujący i zwięzły biogram podkreślający jego kompetencje, doświadczenie i autorytet. 
+        Napisz w trzeciej osobie. Użyj maksymalnie 3-4 zdań.
+        
+        INFORMACJE O AUTORZE:
+        {author_info}
+        
+        Zwróć tylko przetworzoną treść bez dodatkowych tytułów, wprowadzeń czy formatowań.
+        Możesz używać podstawowego formatowania HTML (<strong>, <em>) dla podkreślenia 
+        kluczowych informacji.
+        """
+        
+        # Wywołanie API OpenAI
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Jesteś ekspertem w tworzeniu profesjonalnych biogramów autorów."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        # Zwrócenie wygenerowanego biogramu
+        return response.choices[0].message.content.strip()
+    
+    except Exception as e:
+        # W przypadku błędu, zwróć oryginalne dane
+        st.warning(f"Nie udało się przetworzyć informacji o autorze. Używam oryginalnych danych.")
+        return author_info
 
-# Funkcja do wywołania API OpenAI
-def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", tone="przyjazny", lengths=None):
+# Funkcja do wywołania API OpenAI dla wymaganych zmiennych
+def analyze_pdf_with_openai(pdf_text, persona, required_variables, author_info="", model="o4-mini", tone="przyjazny", lengths=None):
     try:
         # Sprawdzenie, czy klucz API OpenAI jest ustawiony
         api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
@@ -162,15 +224,14 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
         # Dodanie informacji o długościach sekcji, jeśli są dostępne
         length_instructions = ""
         if lengths:
-            length_instructions = """
-            DŁUGOŚCI SEKCJI:
-            """
-            for key, value in lengths.items():
-                length_instructions += f"- {key}: około {value} znaków\n"
+            length_instructions = "DŁUGOŚCI SEKCJI:\n"
+            for var in required_variables:
+                if var in lengths:
+                    length_instructions += f"- {var}: około {lengths.get(var)} znaków\n"
         
         # Informacje o autorze
         author_instructions = ""
-        if author_info and author_info.strip():
+        if "author_credentials" in required_variables and author_info and author_info.strip():
             author_instructions = f"""
             INFORMACJE O AUTORZE:
             {author_info}
@@ -178,15 +239,24 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
             Wykorzystaj powyższe informacje by stworzyć przekonującą sekcję author_credentials.
             """
         
-        # Przygotowanie promptu dla OpenAI z naciskiem na wysoki standard marketingowy i minimalne formatowanie
+        # Przygotowanie listy wymaganych zmiennych z opisami
+        variables_instructions = "WYMAGANE ZMIENNE:\n"
+        for var in required_variables:
+            if var in ALL_VARIABLES:
+                variables_instructions += f"{var} - {ALL_VARIABLES[var]}\n"
+        
+        # Przygotowanie promptu dla OpenAI koncentrując się tylko na wymaganych zmiennych
         prompt = f"""
-        Przeanalizuj poniższy e-book i utwórz wysokiej jakości treści marketingowe dopasowane dla następującej persony:
+        Przeanalizuj poniższy e-book i utwórz wysokiej jakości treści marketingowe dopasowane dla następującej persony.
+        UWAGA: Generuj TYLKO treści dla wymaganych zmiennych wymienionych poniżej - nie dodawaj innych zmiennych.
         
         PERSONA:
         {persona}
         
         TON KOMUNIKACJI:
         {tone_instruction}
+        
+        {variables_instructions}
         
         {length_instructions}
         
@@ -195,22 +265,15 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
         TREŚĆ E-BOOKA:
         {pdf_text}
         
-        Zwróć wynik w formacie JSON z następującymi kluczami:
-        1. intro - Kontekst i problem odbiorcy. Przedstawienie wyzwania, które rozwiązuje ebook. Nie dodawaj tytułów, tylko samą treść.
-        2. why_created - Geneza powstania e-booka, inspiracja, potrzeba. Nie dodawaj tytułów, tylko samą treść.
-        3. contents - Spis treści / kluczowe rozdziały. Lista 3–5 ważnych rozdziałów lub modułów z krótkim opisem. Nie dodawaj tytułów, tylko samą treść.
-        4. problems_solved - Wartość praktyczna, konkretne umiejętności, efekty, decyzje, które pomoże podjąć. Nie dodawaj tytułów, tylko samą treść.
-        5. target_audience - Dla kogo jest ten ebook (i dla kogo nie). Nie dodawaj tytułów, tylko samą treść.
-        6. example - Fragment lub przykład z ebooka. Cytat, mini-case — pokazujący styl i wartość. Nie dodawaj tytułów, tylko samą treść.
-        7. call_to_action - Przekonujące wezwanie do działania, zachęcające do pobrania/zakupu e-booka. Nie dodawaj tytułów, tylko samą treść.
-        8. key_benefits - Lista 3-5 głównych korzyści z przeczytania e-booka (konkretne rezultaty). Nie dodawaj tytułów, tylko samą treść.
-        9. guarantee - Obietnica wartości lub gwarancja rezultatów, które czytelnik uzyska. Nie dodawaj tytułów, tylko samą treść.
-        10. testimonials - 2-3 fikcyjne, ale realistyczne opinie zadowolonych czytelników w formie cytatów. Nie dodawaj tytułów, tylko samą treść.
-        11. value_summary - Zwięzłe podsumowanie najważniejszych wartości i korzyści. Nie dodawaj tytułów, tylko samą treść.
-        12. faq - 3-5 najczęściej zadawanych pytań z odpowiedziami, które rozwiewają wątpliwości. Nie dodawaj tytułów, tylko samą treść.
-        13. urgency - Element budujący poczucie pilności i ograniczoności oferty. Nie dodawaj tytułów, tylko samą treść.
-        14. comparison - Co wyróżnia ten e-book na tle innych materiałów o podobnej tematyce. Nie dodawaj tytułów, tylko samą treść.
-        15. transformation_story - Krótka historia transformacji/zmiany, jaką przeszedł hipotetyczny odbiorca dzięki wiedzy z e-booka. Nie dodawaj tytułów, tylko samą treść.
+        Zwróć wynik w formacie JSON zawierający TYLKO poniższe wymagane klucze:
+        """
+        
+        # Dodaj opis każdej wymaganej zmiennej
+        for i, var in enumerate(required_variables, 1):
+            if var in ALL_VARIABLES:
+                prompt += f"\n{i}. {var} - {ALL_VARIABLES[var]}. Nie dodawaj tytułów, tylko samą treść."
+        
+        prompt += """
         
         WAŻNE WSKAZÓWKI DLA TWORZENIA TREŚCI:
         - Stwórz treści, które są WYSOCE ANGAŻUJĄCE i PRZEKONUJĄCE marketingowo
@@ -229,7 +292,7 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
         WAŻNE: Zwróć TYLKO obiekt JSON bez dodatkowego tekstu przed lub po.
         """
         
-        # Wywołanie API OpenAI (nowy sposób w wersji >=1.0.0)
+        # Wywołanie API OpenAI
         response = client.chat.completions.create(
             model=model,
             messages=[
@@ -238,7 +301,7 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
             ]
         )
         
-        # Parsowanie odpowiedzi do JSON (nowy sposób w wersji >=1.0.0)
+        # Parsowanie odpowiedzi do JSON
         content = response.choices[0].message.content
         
         # Wydobycie fragmentu JSON z odpowiedzi (na wypadek, gdyby model dodał tekst przed/po JSON)
@@ -275,24 +338,13 @@ def analyze_pdf_with_openai(pdf_text, persona, author_info="", model="o4-mini", 
                 value = json_content[key]
                 json_content[key] = re.sub(pattern, '', value, flags=re.IGNORECASE)
         
-        # Dodaj informacje o autorze, jeśli podane
-        if author_info and author_info.strip():
-            json_content["author_credentials"] = generate_author_credentials(author_info)
-            
-        # Walidacja JSON według schematu
-        # Usuń author_credentials z listy wymaganych pól jeśli nie podano informacji o autorze
-        if not author_info or author_info.strip() == "":
-            json_schema_copy = JSON_SCHEMA.copy()
-            if "author_credentials" in json_schema_copy.get("required", []):
-                json_schema_copy["required"].remove("author_credentials")
-            validate(instance=json_content, schema=json_schema_copy)
-        else:
-            # Dodaj author_credentials do schematu
-            json_schema_copy = JSON_SCHEMA.copy()
-            json_schema_copy["properties"]["author_credentials"] = {"type": "string", "description": "Kwalifikacje autora"}
-            if "author_credentials" not in json_schema_copy.get("required", []):
-                json_schema_copy["required"].append("author_credentials")
-            validate(instance=json_content, schema=json_schema_copy)
+        # Walidacja JSON według dynamicznie utworzonego schematu
+        json_schema = create_dynamic_json_schema(required_variables)
+        validate(instance=json_content, schema=json_schema)
+        
+        # Jeśli potrzebny jest author_credentials, a nie został wygenerowany
+        if "author_credentials" in required_variables and "author_credentials" not in json_content and author_info:
+            json_content["author_credentials"] = generate_author_credentials(author_info, model=model, api_key=api_key)
         
         return json_content
     
@@ -352,25 +404,9 @@ def init_session_state():
     
     if "current_html" not in st.session_state:
         st.session_state.current_html = None
-
-# Funkcja do grupowania zakładek edycji
-def create_tab_groups(json_data):
-    # Wszystkie klucze z json_data
-    all_keys = list(json_data.keys())
     
-    # Definiujemy grupy zakładek
-    tab_groups = {
-        "Podstawowe informacje": ["intro", "why_created", "contents", "problems_solved", "target_audience", "example"],
-        "Korzyści i wartość": ["key_benefits", "guarantee", "value_summary", "comparison"],
-        "Elementy perswazyjne": ["call_to_action", "testimonials", "urgency", "transformation_story"],
-        "Dodatkowe elementy": ["faq"]
-    }
-    
-    # Dodajemy informacje o autorze, jeśli są dostępne
-    if "author_credentials" in all_keys:
-        tab_groups["Dodatkowe elementy"].append("author_credentials")
-    
-    return tab_groups
+    if "required_variables" not in st.session_state:
+        st.session_state.required_variables = set()
 
 # Główna aplikacja Streamlit
 def main():
@@ -408,52 +444,7 @@ def main():
         help="Wybierz preferowany ton komunikacji dla generowanych treści."
     )
     
-    # Zakładki dla ustawień długości
-    length_tabs = st.sidebar.tabs(["Podstawowe", "Korzyści", "Perswazja", "Inne"])
-    
-    with length_tabs[0]:
-        # Dodajemy kontrolę długości sekcji dla podstawowych elementów
-        st.subheader("Długość sekcji (znaki):")
-        intro_length = st.slider("Wstęp", 150, 800, 300)
-        why_created_length = st.slider("Dlaczego powstał", 150, 800, 300)
-        contents_length = st.slider("Zawartość", 200, 1000, 400)
-        problems_solved_length = st.slider("Rozwiązania problemów", 200, 800, 350)
-        target_audience_length = st.slider("Grupa docelowa", 150, 800, 300)
-        example_length = st.slider("Przykład", 150, 800, 300)
-    
-    with length_tabs[1]:
-        # Dodajemy kontrolę długości sekcji dla elementów korzyści i wartości
-        st.subheader("Długość sekcji (znaki):")
-        key_benefits_length = st.slider("Kluczowe korzyści", 200, 1000, 400)
-        guarantee_length = st.slider("Gwarancja", 150, 800, 300)
-        value_summary_length = st.slider("Podsumowanie wartości", 150, 800, 300)
-        comparison_length = st.slider("Porównanie", 200, 1000, 400)
-    
-    with length_tabs[2]:
-        # Dodajemy kontrolę długości sekcji dla elementów perswazyjnych
-        st.subheader("Długość sekcji (znaki):")
-        call_to_action_length = st.slider("Wezwanie do działania", 150, 800, 250)
-        testimonials_length = st.slider("Opinie", 300, 1200, 500)
-        urgency_length = st.slider("Pilność", 150, 800, 250)
-        transformation_length = st.slider("Historia transformacji", 200, 1000, 400)
-    
-    with length_tabs[3]:
-        # Dodajemy kontrolę długości sekcji dla dodatkowych elementów
-        st.subheader("Długość sekcji (znaki):")
-        faq_length = st.slider("FAQ", 300, 1500, 800)
-        author_credentials_length = st.slider("O autorze", 150, 800, 300)
-    
-    st.sidebar.markdown("""
-    **Opis tonów komunikacji:**
-    - **Profesjonalny** – rzeczowy, uprzejmy, bez emocjonalnych wyrażeń
-    - **Przyjazny** – ciepły, osobisty, otwarty
-    - **Zabawny** – z humorem, żartobliwy
-    - **Motywujący** – podnoszący na duchu, zachęcający
-    - **Poważny** – zdystansowany, neutralny, formalny
-    - **Empatyczny** – wspierający, rozumiejący emocje odbiorcy
-    """)
-    
-    # Dodaj dokumentację zmiennych w panelu bocznym
+    # Dokumentacja zmiennych w panelu bocznym
     with st.sidebar.expander("📚 Dokumentacja dostępnych zmiennych", expanded=False):
         st.markdown("""
         ### Podstawowe zmienne
@@ -492,6 +483,16 @@ def main():
         
         st.markdown("💡 **Wskazówka:** Zmienne zawierają tylko podstawowe formatowanie HTML (bold, italic, listy).")
     
+    st.sidebar.markdown("""
+    **Opis tonów komunikacji:**
+    - **Profesjonalny** – rzeczowy, uprzejmy, bez emocjonalnych wyrażeń
+    - **Przyjazny** – ciepły, osobisty, otwarty
+    - **Zabawny** – z humorem, żartobliwy
+    - **Motywujący** – podnoszący na duchu, zachęcający
+    - **Poważny** – zdystansowany, neutralny, formalny
+    - **Empatyczny** – wspierający, rozumiejący emocje odbiorcy
+    """)
+    
     with st.form("input_form"):
         # Upload pliku PDF
         uploaded_file = st.file_uploader("Wybierz plik PDF z e-bookiem", type="pdf")
@@ -524,272 +525,199 @@ def main():
         pdf_text = read_pdf(uploaded_file)
         
         if pdf_text:
-            progress_bar.progress(25)
-            progress_text.text("Analiza treści i generowanie wyników...")
+            progress_bar.progress(20)
+            progress_text.text("Analizowanie szablonu HTML i identyfikacja wymaganych zmiennych...")
             
-            # Informacja o długości tekstu
-            token_estimate = len(pdf_text) / 4  # Przybliżona liczba tokenów (4 znaki na token)
-            if token_estimate > 100000:
-                st.warning(f"Uwaga: Tekst zawiera około {int(token_estimate)} tokenów, co może przekroczyć limit kontekstu wybranego modelu.")
+            # Analiza szablonu HTML i identyfikacja używanych zmiennych
+            required_variables = extract_variables_from_template(html_template)
             
-            # Analiza PDF i uzyskanie treści marketingowych
-            lengths = {
-                "intro": intro_length,
-                "why_created": why_created_length,
-                "contents": contents_length,
-                "problems_solved": problems_solved_length,
-                "target_audience": target_audience_length,
-                "example": example_length,
-                "call_to_action": call_to_action_length,
-                "key_benefits": key_benefits_length,
-                "guarantee": guarantee_length,
-                "testimonials": testimonials_length,
-                "value_summary": value_summary_length,
-                "faq": faq_length,
-                "urgency": urgency_length,
-                "comparison": comparison_length,
-                "transformation_story": transformation_length,
-                "author_credentials": author_credentials_length
-            }
-            json_data = analyze_pdf_with_openai(pdf_text, persona, author_info, model=openai_model, tone=tone, lengths=lengths)
+            # Dodaj author_credentials jeśli podano informacje o autorze
+            if author_info and author_info.strip():
+                required_variables.add("author_credentials")
             
-            progress_bar.progress(90)
+            # Zapisz listę wymaganych zmiennych w sesji
+            st.session_state.required_variables = required_variables
             
-            if json_data:
-                # Zapisanie danych do sesji
-                st.session_state.current_json_data = json_data
+            # Sprawdź, czy są jakieś zidentyfikowane zmienne
+            if not required_variables:
+                st.error("Nie znaleziono żadnych zmiennych w szablonie HTML. Upewnij się, że używasz poprawnego formatu {!{ nazwa_zmiennej }!}")
+                progress_bar.empty()
+                return
+            
+            # Wyświetl znalezione zmienne
+            progress_bar.progress(30)
+            progress_text.text(f"Znaleziono {len(required_variables)} zmiennych w szablonie: {', '.join(required_variables)}")
+            
+            # Przygotowanie panelu do ustawienia długości zmiennych
+            st.subheader("Dostosuj długość dla każdej zmiennej:")
+            
+            # Podziel zmienne na grupy po 4
+            variable_groups = [list(required_variables)[i:i+4] for i in range(0, len(required_variables), 4)]
+            
+            # Stwórz zakładki dla każdej grupy
+            if len(variable_groups) > 1:
+                tab_names = [f"Grupa {i+1}" for i in range(len(variable_groups))]
+                length_tabs = st.tabs(tab_names)
+            else:
+                length_tabs = [st]  # Jeśli jest tylko jedna grupa, używamy głównego obszaru
+            
+            # Dla każdej zakładki/grupy
+            lengths = {}
+            for i, group in enumerate(variable_groups):
+                with length_tabs[i] if len(variable_groups) > 1 else length_tabs[0]:
+                    # Dla każdej zmiennej w grupie
+                    for var in group:
+                        # Określ domyślną długość w zależności od typu zmiennej
+                        default_length = 300
+                        if var in ["contents", "faq", "testimonials"]:
+                            default_length = 600
+                        elif var in ["key_benefits", "problems_solved"]:
+                            default_length = 400
+                        
+                        # Stwórz suwak do ustawienia długości
+                        lengths[var] = st.slider(
+                            f"{var.replace('_', ' ').title()}", 
+                            min_value=100, 
+                            max_value=1000, 
+                            value=default_length,
+                            help=f"Dostosuj długość dla zmiennej {var}"
+                        )
+            
+            # Generuj treści
+            generate_button = st.button("Generuj treści")
+            
+            if generate_button:
+                progress_bar.progress(40)
+                progress_text.text("Generowanie treści dla wybranych zmiennych...")
                 
-                progress_text.text("Analiza zakończona pomyślnie!")
-                progress_bar.progress(100)
+                # Informacja o długości tekstu
+                token_estimate = len(pdf_text) / 4  # Przybliżona liczba tokenów (4 znaki na token)
+                if token_estimate > 100000:
+                    st.warning(f"Uwaga: Tekst zawiera około {int(token_estimate)} tokenów, co może przekroczyć limit kontekstu wybranego modelu.")
                 
-                # Wyświetlenie edytora wygenerowanych treści w grupach zakładek
-                st.subheader("Edytuj wygenerowane treści:")
+                # Analiza PDF i uzyskanie treści marketingowych tylko dla wymaganych zmiennych
+                json_data = analyze_pdf_with_openai(
+                    pdf_text, 
+                    persona, 
+                    required_variables, 
+                    author_info, 
+                    model=openai_model, 
+                    tone=tone, 
+                    lengths=lengths
+                )
                 
-                # Tworzymy grupy zakładek
-                tab_groups = create_tab_groups(json_data)
-                group_tabs = st.tabs(list(tab_groups.keys()))
+                progress_bar.progress(90)
                 
-                edited_json = {}
-                
-                # Dla każdej grupy zakładek
-                for i, (group_name, keys) in enumerate(tab_groups.items()):
-                    with group_tabs[i]:
-                        # Tworzymy zakładki dla każdej sekcji w grupie
-                        if keys:
-                            section_tabs = st.tabs([key.replace("_", " ").title() for key in keys])
-                            
-                            # Dla każdej sekcji tworzymy edytor
-                            for j, key in enumerate(keys):
-                                if key in json_data:
-                                    with section_tabs[j]:
-                                        edited_json[key] = st.text_area(
-                                            f"Edytuj treść dla {key.replace('_', ' ').title()}", 
-                                            json_data[key], 
+                if json_data:
+                    # Zapisanie danych do sesji
+                    st.session_state.current_json_data = json_data
+                    
+                    progress_text.text("Generowanie zakończone pomyślnie!")
+                    progress_bar.progress(100)
+                    
+                    # Wyświetlenie edytora wygenerowanych treści
+                    st.subheader("Edytuj wygenerowane treści:")
+                    
+                    # Podziel zmienne na grupy dla lepszej organizacji
+                    variable_groups = {
+                        "Podstawowe informacje": ["intro", "why_created", "contents", "problems_solved", "target_audience", "example"],
+                        "Korzyści i wartość": ["key_benefits", "guarantee", "value_summary", "comparison"],
+                        "Elementy perswazyjne": ["call_to_action", "testimonials", "urgency", "transformation_story"],
+                        "Dodatkowe elementy": ["faq", "author_credentials"]
+                    }
+                    
+                    # Utworzenie zakładek dla grup
+                    group_names = []
+                    for group_name, vars_in_group in variable_groups.items():
+                        # Sprawdź, czy grupa zawiera jakiekolwiek wymagane zmienne
+                        if any(var in required_variables for var in vars_in_group):
+                            group_names.append(group_name)
+                    
+                    group_tabs = st.tabs(group_names)
+                    
+                    # Dla każdej grupy
+                    edited_json = {}
+                    tab_index = 0
+                    
+                    for group_name, vars_in_group in variable_groups.items():
+                        # Jeśli grupa zawiera wymagane zmienne
+                        group_vars = [var for var in vars_in_group if var in required_variables]
+                        if group_vars:
+                            with group_tabs[tab_index]:
+                                # Dla każdej zmiennej w grupie
+                                for var in group_vars:
+                                    if var in json_data:
+                                        edited_json[var] = st.text_area(
+                                            f"{var.replace('_', ' ').title()}", 
+                                            json_data[var], 
                                             height=200
                                         )
-                
-                # Zastosowanie zmian
-                apply_changes = st.button("Zastosuj zmiany")
-                if apply_changes:
-                    # Upewnij się, że wszystkie klucze są zachowane
-                    for key in json_data:
-                        if key not in edited_json:
-                            edited_json[key] = json_data[key]
+                            tab_index += 1
                     
-                    json_data = edited_json
-                    st.session_state.current_json_data = json_data
-                    st.success("Zmiany zostały zastosowane!")
-                
-                # Podstawienie wartości w kreacji mailowej
-                final_html = replace_variables_in_html(html_template, json_data)
-                st.session_state.current_html = final_html
-                
-                # Spróbujmy jeszcze jedną metodę - użyjmy komponentu HTML w bardziej bezpośredni sposób
-                st.subheader("Podgląd kreacji:")
-                
-                # Przygotowanie HTML z CSS
-                html_with_style = f"""
-                <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    line-height: 1.6;
-                    color: #333;
-                    margin: 20px;
-                    max-width: 800px;
-                }}
-                h1, h2, h3, h4, h5, h6 {{
-                    color: #2c3e50;
-                    margin-top: 1.5em;
-                    margin-bottom: 0.5em;
-                }}
-                p {{
-                    margin-bottom: 1em;
-                }}
-                ul, ol {{
-                    margin-bottom: 1em;
-                    padding-left: 2em;
-                }}
-                blockquote {{
-                    border-left: 4px solid #ddd;
-                    padding: 0.5em 1em;
-                    margin: 1em 0;
-                    background-color: #f9f9f9;
-                }}
-                dl dt {{
-                    font-weight: bold;
-                    margin-top: 1em;
-                }}
-                dl dd {{
-                    margin-left: 1em;
-                    margin-bottom: 1em;
-                }}
-                </style>
-                {final_html}
-                """
-                
-                # Używamy st.components.v1.html
-                st.components.v1.html(html_with_style, height=600, scrolling=True)
-                
-                # Wyświetlenie końcowej kreacji (kod HTML)
-                with st.expander("Pokaż kod HTML", expanded=False):
-                    st.code(final_html, language="html")
-                
-                # Przycisk do kopiowania kodu
-                st.subheader("Kopiuj kod do schowka:")
-                st.markdown(get_copy_button_html(final_html), unsafe_allow_html=True)
-                
-                # Wyświetlenie informacji o dostępnych zmiennych
-                with st.expander("Dostępne zmienne do użycia w szablonie HTML", expanded=False):
-                    st.markdown("""
-                    # Dokumentacja zmiennych
+                    # Zastosowanie zmian
+                    apply_changes = st.button("Zastosuj zmiany")
+                    if apply_changes:
+                        # Upewnij się, że wszystkie klucze są zachowane
+                        for key in json_data:
+                            if key not in edited_json:
+                                edited_json[key] = json_data[key]
+                        
+                        json_data = edited_json
+                        st.session_state.current_json_data = json_data
+                        st.success("Zmiany zostały zastosowane!")
                     
-                    Poniżej znajduje się lista wszystkich dostępnych zmiennych, które możesz umieścić w swoim szablonie HTML:
+                    # Podstawienie wartości w kreacji mailowej
+                    final_html = replace_variables_in_html(html_template, json_data)
+                    st.session_state.current_html = final_html
                     
-                    | Zmienna | Opis | Format zawartości |
-                    |---------|------|-------------------|
-                    | `intro` | Wstęp — kontekst i problem odbiorcy | Akapit tekstu opisujący problem, który rozwiązuje e-book |
-                    | `why_created` | Dlaczego powstał ten e-book | Akapit tekstu o motywacji i genezie powstania e-booka |
-                    | `contents` | Co znajdziesz w środku e-booka | Lista HTML (ul/li) z punktami dotyczącymi zawartości |
-                    | `problems_solved` | Problemy rozwiązywane przez e-book | Tekst opisujący wartość praktyczną i korzyści |
-                    | `target_audience` | Dla kogo jest ten e-book | Opis grupy docelowej oraz kto nie jest odbiorcą |
-                    | `example` | Fragment lub przykład z e-booka | Cytat lub mini-case z e-booka |
-                    | `call_to_action` | Wezwanie do działania | Zwięzły, motywujący tekst zachęcający do pobrania/zakupu |
-                    | `key_benefits` | Główne korzyści | Lista HTML (ul/li) z kluczowymi korzyściami |
-                    | `guarantee` | Obietnica/gwarancja | Tekst z obietnicą wartości dla czytelnika |
-                    | `testimonials` | Opinie użytkowników | Cytaty w formacie HTML (blockquote) z opiniami |
-                    | `value_summary` | Podsumowanie wartości | Zwięzły tekst podsumowujący główne punkty i korzyści |
-                    | `faq` | Najczęściej zadawane pytania | Format HTML (dl/dt/dd) z pytaniami i odpowiedziami |
-                    | `urgency` | Element pilności/ograniczoności | Tekst budujący poczucie pilności decyzji |
-                    | `comparison` | Porównanie z konkurencją | Tekst wyjaśniający, co wyróżnia ten e-book |
-                    | `transformation_story` | Historia transformacji | Narracja pokazująca zmianę po zastosowaniu wiedzy z e-booka |
-                    | `author_credentials` | Kwalifikacje autora | Opis autora, jego doświadczenia i wiedzy (opcjonalnie) |
+                    # Podgląd kreacji
+                    st.subheader("Podgląd kreacji:")
                     
-                    ### Przykłady użycia w HTML:
+                    # Przygotowanie HTML z CSS
+                    html_with_style = f"""
+                    <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        margin: 20px;
+                        max-width: 800px;
+                    }}
+                    h1, h2, h3, h4, h5, h6 {{
+                        color: #2c3e50;
+                        margin-top: 1.5em;
+                        margin-bottom: 0.5em;
+                    }}
+                    p {{
+                        margin-bottom: 1em;
+                    }}
+                    ul, ol {{
+                        margin-bottom: 1em;
+                        padding-left: 2em;
+                    }}
+                    blockquote {{
+                        border-left: 4px solid #ddd;
+                        padding: 0.5em 1em;
+                        margin: 1em 0;
+                        background-color: #f9f9f9;
+                    }}
+                    </style>
+                    {final_html}
+                    """
                     
-                    ```html
-                    <!-- Podstawowe użycie -->
-                    <div class="intro">
-                        <h2>Wprowadzenie</h2>
-                        <p>{!{ intro }!}</p>
-                    </div>
+                    # Używamy st.components.v1.html
+                    st.components.v1.html(html_with_style, height=600, scrolling=True)
                     
-                    <!-- Dla list (contents, key_benefits) -->
-                    <div class="benefits">
-                        <h2>Korzyści z e-booka</h2>
-                        {!{ key_benefits }!}
-                    </div>
+                    # Wyświetlenie końcowej kreacji (kod HTML)
+                    with st.expander("Pokaż kod HTML", expanded=False):
+                        st.code(final_html, language="html")
                     
-                    <!-- Dla opinii (testimonials) -->
-                    <div class="testimonials-section">
-                        <h2>Co mówią nasi czytelnicy</h2>
-                        {!{ testimonials }!}
-                    </div>
-                    
-                    <!-- Wezwanie do działania jako przycisk -->
-                    <a href="#download" class="cta-button">
-                        {!{ call_to_action }!}
-                    </a>
-                    ```
-                    """)
-                    
-                    st.download_button(
-                        label="Pobierz pełną dokumentację zmiennych",
-                        data="""# Dokumentacja zmiennych w generatorze treści marketingowych
-
-## Dostępne zmienne
-
-Poniżej znajduje się lista wszystkich zmiennych, które możesz umieścić w swoim szablonie HTML. Aby użyć zmiennej w szablonie, umieść ją w formacie `{!{ nazwa_zmiennej }!}`.
-
-| Zmienna | Opis | Format zawartości |
-|---------|------|-------------------|
-| `intro` | Wstęp — kontekst i problem odbiorcy | Akapit tekstu opisujący problem, który rozwiązuje e-book |
-| `why_created` | Dlaczego powstał ten e-book | Akapit tekstu o motywacji i genezie powstania e-booka |
-| `contents` | Co znajdziesz w środku e-booka | Lista HTML (ul/li) z punktami dotyczącymi zawartości |
-| `problems_solved` | Problemy rozwiązywane przez e-book | Tekst opisujący wartość praktyczną i korzyści |
-| `target_audience` | Dla kogo jest ten e-book | Opis grupy docelowej oraz kto nie jest odbiorcą |
-| `example` | Fragment lub przykład z e-booka | Cytat lub mini-case z e-booka |
-| `call_to_action` | Wezwanie do działania | Zwięzły, motywujący tekst zachęcający do pobrania/zakupu |
-| `key_benefits` | Główne korzyści | Lista HTML (ul/li) z kluczowymi korzyściami |
-| `guarantee` | Obietnica/gwarancja | Tekst z obietnicą wartości dla czytelnika |
-| `testimonials` | Opinie użytkowników | Cytaty z opiniami |
-| `value_summary` | Podsumowanie wartości | Zwięzły tekst podsumowujący główne punkty i korzyści |
-| `faq` | Najczęściej zadawane pytania | Pytania i odpowiedzi oddzielone znacznikami <br> |
-| `urgency` | Element pilności/ograniczoności | Tekst budujący poczucie pilności decyzji |
-| `comparison` | Porównanie z konkurencją | Tekst wyjaśniający, co wyróżnia ten e-book |
-| `transformation_story` | Historia transformacji | Narracja pokazująca zmianę po zastosowaniu wiedzy z e-booka |
-| `author_credentials` | Kwalifikacje autora | Opis autora, jego doświadczenia i wiedzy (opcjonalnie) |
-
-## Przykłady użycia zmiennych
-
-### 1. Podstawowe użycie
-
-```html
-<div class="intro">
-    <h2>Wprowadzenie</h2>
-    <p>{!{ intro }!}</p>
-</div>
-
-<div class="benefits">
-    <h2>Korzyści z e-booka</h2>
-    {!{ key_benefits }!}
-</div>
-```
-
-### 2. Sekcja FAQ
-
-```html
-<div class="faq-section">
-    <h2>Często zadawane pytania</h2>
-    <div class="faq-content">
-        {!{ faq }!}
-    </div>
-</div>
-```
-
-### 3. Rekomendacje i opinie
-
-```html
-<div class="testimonials-section">
-    <h2>Co mówią nasi czytelnicy</h2>
-    <div class="testimonials-slider">
-        {!{ testimonials }!}
-    </div>
-</div>
-```
-
-### 4. Wezwanie do działania jako przycisk
-
-```html
-<a href="#download" class="cta-button">
-    {!{ call_to_action }!}
-</a>
-```""",
-                        file_name="zmienne-marketing-dokumentacja.md",
-                        mime="text/markdown",
-                    )
-            else:
-                progress_text.text("Wystąpił błąd podczas analizy.")
-                progress_bar.empty()
+                    # Przycisk do kopiowania kodu
+                    st.subheader("Kopiuj kod do schowka:")
+                    st.markdown(get_copy_button_html(final_html), unsafe_allow_html=True)
+                else:
+                    progress_text.text("Wystąpił błąd podczas analizy.")
+                    progress_bar.empty()
     
     elif submit_button:
         st.warning("Proszę wypełnić wszystkie wymagane pola formularza i dodać plik PDF.")
