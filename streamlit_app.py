@@ -274,7 +274,7 @@ def main():
     tone = st.sidebar.selectbox(
         "Ton komunikacji",
         ["profesjonalny", "przyjazny", "zabawny", "motywujący", "poważny", "empatyczny"],
-        index=0,
+        index=1,
         help="Wybierz preferowany ton komunikacji dla generowanych treści."
     )
     
