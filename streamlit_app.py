@@ -15,23 +15,39 @@ st.set_page_config(
 
 # Lista wszystkich dostępnych zmiennych z opisami
 ALL_VARIABLES = {
-    "intro": "Wstęp — kontekst i problem odbiorcy",
-    "why_created": "Dlaczego powstał ten ebook",
-    "contents": "Co znajdziesz w środku (spis treści / kluczowe rozdziały)",
-    "problems_solved": "Jakie problemy rozwiązuje (wartość praktyczna)",
-    "target_audience": "Dla kogo jest ten ebook (i dla kogo nie)",
-    "example": "Fragment lub przykład z ebooka",
-    "call_to_action": "Wezwanie do działania, zachęta do pobrania/zakupu",
-    "key_benefits": "Lista głównych korzyści z przeczytania e-booka",
-    "guarantee": "Obietnica wartości, gwarancja rezultatów",
-    "testimonials": "Opinie czytelników, społeczny dowód słuszności",
-    "value_summary": "Podsumowanie najważniejszych punktów i korzyści",
-    "faq": "Najczęściej zadawane pytania z odpowiedziami",
-    "urgency": "Element budujący poczucie pilności decyzji",
-    "comparison": "Co wyróżnia ten e-book na tle konkurencji",
-    "transformation_story": "Historia transformacji dzięki wiedzy z e-booka",
-    "author_credentials": "Kwalifikacje autora (opcjonalne)"
+    "intro": "Wstęp — akapit otwierający, prezentuje kontekst sytuacyjny odbiorcy i główny problem, bez podawania nazwy e-booka ani zachęty do zakupu",
+
+    "why_created": "Cel powstania e-booka — precyzyjne wskazanie luki rynkowej lub potrzeby edukacyjnej, wyjaśnienie motywacji autora lub zespołu, bez użycia pierwszej osoby liczby pojedynczej",
+
+    "contents": "Zawartość e-booka — szczegółowy spis kluczowych rozdziałów, modułów, dodatków lub checklist wraz z krótkimi opisami, umożliwiający szybkie zrozumienie struktury materiału",
+
+    "problems_solved": "Problemy rozwiązane — jednoznaczna lista bolączek eliminowanych dzięki treści, sformułowana w języku korzyści mierzalnych dla odbiorcy",
+
+    "target_audience": "Grupa docelowa — jasne wskazanie, kto skorzysta z publikacji oraz komu może ona nie przynieść wartości, z podaniem konkretnych cech lub poziomu zaawansowania",
+
+    "example": "Przykład z e-booka — cytowany fragment, kod, tabela lub ilustracja prezentująca styl oraz praktyczną wartość materiału",
+
+    "call_to_action": "Wezwanie do działania — pojedynczy, zwięzły komunikat w trybie rozkazującym, zachęcający do pobrania lub zakupu, ewentualnie z elementem limitu czasowego lub ilościowego",
+
+    "key_benefits": "Główne korzyści — uporządkowany zbiór konkretnych efektów, jakie czytelnik osiągnie po wdrożeniu wiedzy, pisany językiem rezultatów, nie cech produktu",
+
+    "guarantee": "Gwarancja jakości — jednoznaczna deklaracja dotycząca wartości merytorycznej lub możliwości zwrotu, eliminująca ryzyko po stronie klienta",
+
+    "testimonials": "Opinie — autentyczne cytaty czytelników lub ekspertów, opatrzone imieniem, stanowiskiem lub firmą i odnoszące się bezpośrednio do efektów osiągniętych dzięki e-bookowi",
+
+    "value_summary": "Podsumowanie wartości — syntetyczne zestawienie najważniejszych punktów i korzyści zamykające treść oferty, przygotowujące odbiorcę do finalnego CTA",
+
+    "faq": "FAQ — lista najczęściej stawianych pytań z klarownymi odpowiedziami rozwiewającymi wątpliwości dotyczące zawartości, formatu i procesu zakupu",
+
+    "urgency": "Pilność — wyraźna informacja o ograniczeniu czasowym, ilościowym lub cenowym, budująca presję szybkiej decyzji bez użycia scenariuszy straszenia",
+
+    "comparison": "Porównanie — przejrzyste zestawienie przewag e-booka nad alternatywnymi rozwiązaniami, wskazujące unikalne cechy oraz mierzalne różnice",
+
+    "transformation_story": "Historia transformacji — opis stanu przed oraz po zastosowaniu wiedzy z e-booka z uwzględnieniem konkretnych metryk lub rezultatów",
+
+    "author_credentials": "Kwalifikacje autora — fakty potwierdzające kompetencje, takie jak doświadczenie branżowe, liczba zrealizowanych projektów lub uzyskane certyfikaty"
 }
+
 
 # Funkcja do odczytywania zawartości pliku PDF
 def read_pdf(pdf_file):
@@ -407,6 +423,34 @@ def init_session_state():
     
     if "required_variables" not in st.session_state:
         st.session_state.required_variables = set()
+        
+    # Inicjalizacja domyślnych długości dla zmiennych
+    if "var_lengths" not in st.session_state:
+        st.session_state.var_lengths = {
+            # Podstawowe zmienne
+            "intro": 300,
+            "why_created": 300,
+            "contents": 400,
+            "problems_solved": 350,
+            "target_audience": 300,
+            "example": 300,
+            
+            # Korzyści i wartość
+            "key_benefits": 400,
+            "guarantee": 300,
+            "value_summary": 300,
+            "comparison": 400,
+            
+            # Elementy perswazyjne
+            "call_to_action": 250,
+            "testimonials": 500,
+            "urgency": 250,
+            "transformation_story": 400,
+            
+            # Dodatkowe elementy
+            "faq": 800,
+            "author_credentials": 300
+        }
 
 # Główna aplikacja Streamlit
 def main():
@@ -483,6 +527,43 @@ def main():
         
         st.markdown("💡 **Wskazówka:** Zmienne zawierają tylko podstawowe formatowanie HTML (bold, italic, listy).")
     
+    # Ustawienia długości zmiennych w panelu bocznym
+    with st.sidebar.expander("⚙️ Ustawienia długości zmiennych", expanded=False):
+        # Pogrupuj zmienne w zakładki
+        length_tabs = st.tabs(["Podstawowe", "Korzyści", "Perswazja", "Dodatkowe"])
+        
+        with length_tabs[0]:
+            # Podstawowe elementy
+            st.subheader("Podstawowe sekcje")
+            st.session_state.var_lengths["intro"] = st.slider("Wstęp", 150, 800, st.session_state.var_lengths["intro"])
+            st.session_state.var_lengths["why_created"] = st.slider("Dlaczego powstał", 150, 800, st.session_state.var_lengths["why_created"])
+            st.session_state.var_lengths["contents"] = st.slider("Zawartość", 200, 1000, st.session_state.var_lengths["contents"])
+            st.session_state.var_lengths["problems_solved"] = st.slider("Rozwiązania problemów", 200, 800, st.session_state.var_lengths["problems_solved"])
+            st.session_state.var_lengths["target_audience"] = st.slider("Grupa docelowa", 150, 800, st.session_state.var_lengths["target_audience"])
+            st.session_state.var_lengths["example"] = st.slider("Przykład", 150, 800, st.session_state.var_lengths["example"])
+        
+        with length_tabs[1]:
+            # Elementy korzyści
+            st.subheader("Korzyści i wartość")
+            st.session_state.var_lengths["key_benefits"] = st.slider("Kluczowe korzyści", 200, 1000, st.session_state.var_lengths["key_benefits"])
+            st.session_state.var_lengths["guarantee"] = st.slider("Gwarancja", 150, 800, st.session_state.var_lengths["guarantee"])
+            st.session_state.var_lengths["value_summary"] = st.slider("Podsumowanie wartości", 150, 800, st.session_state.var_lengths["value_summary"])
+            st.session_state.var_lengths["comparison"] = st.slider("Porównanie", 200, 1000, st.session_state.var_lengths["comparison"])
+        
+        with length_tabs[2]:
+            # Elementy perswazyjne
+            st.subheader("Elementy perswazyjne")
+            st.session_state.var_lengths["call_to_action"] = st.slider("Wezwanie do działania", 150, 800, st.session_state.var_lengths["call_to_action"])
+            st.session_state.var_lengths["testimonials"] = st.slider("Opinie", 300, 1200, st.session_state.var_lengths["testimonials"])
+            st.session_state.var_lengths["urgency"] = st.slider("Pilność", 150, 800, st.session_state.var_lengths["urgency"])
+            st.session_state.var_lengths["transformation_story"] = st.slider("Historia transformacji", 200, 1000, st.session_state.var_lengths["transformation_story"])
+        
+        with length_tabs[3]:
+            # Dodatkowe elementy
+            st.subheader("Dodatkowe elementy")
+            st.session_state.var_lengths["faq"] = st.slider("FAQ", 300, 1500, st.session_state.var_lengths["faq"])
+            st.session_state.var_lengths["author_credentials"] = st.slider("O autorze", 150, 800, st.session_state.var_lengths["author_credentials"])
+    
     st.sidebar.markdown("""
     **Opis tonów komunikacji:**
     - **Profesjonalny** – rzeczowy, uprzejmy, bez emocjonalnych wyrażeń
@@ -512,10 +593,10 @@ def main():
                                     height=300,
                                     help="Wprowadź kod HTML kreacji mailowej z zmiennymi w formacie {!{ nazwa_zmiennej }!}")
         
-        # Przycisk do analizy
-        submit_button = st.form_submit_button("Analizuj i generuj treść")
+        # Przycisk analizy i generowania
+        analyze_button = st.form_submit_button("Analizuj i generuj treść")
     
-    if submit_button and uploaded_file is not None and persona and html_template:
+    if analyze_button and uploaded_file is not None and persona and html_template:
         # Inicjalizacja informacji o postępie
         progress_text = st.empty()
         progress_text.text("Odczytywanie pliku PDF...")
@@ -531,8 +612,8 @@ def main():
             # Analiza szablonu HTML i identyfikacja używanych zmiennych
             required_variables = extract_variables_from_template(html_template)
             
-            # Dodaj author_credentials jeśli podano informacje o autorze
-            if author_info and author_info.strip():
+            # Dodaj author_credentials jeśli podano informacje o autorze i zmienna jest używana
+            if "author_credentials" in html_template and author_info and author_info.strip():
                 required_variables.add("author_credentials")
             
             # Zapisz listę wymaganych zmiennych w sesji
@@ -548,178 +629,143 @@ def main():
             progress_bar.progress(30)
             progress_text.text(f"Znaleziono {len(required_variables)} zmiennych w szablonie: {', '.join(required_variables)}")
             
-            # Przygotowanie panelu do ustawienia długości zmiennych
-            st.subheader("Dostosuj długość dla każdej zmiennej:")
+            # Przygotowanie słownika długości tylko dla wymaganych zmiennych
+            lengths = {var: st.session_state.var_lengths.get(var, 300) for var in required_variables}
             
-            # Podziel zmienne na grupy po 4
-            variable_groups = [list(required_variables)[i:i+4] for i in range(0, len(required_variables), 4)]
+            # Generowanie treści
+            progress_bar.progress(40)
+            progress_text.text("Generowanie treści dla wybranych zmiennych...")
             
-            # Stwórz zakładki dla każdej grupy
-            if len(variable_groups) > 1:
-                tab_names = [f"Grupa {i+1}" for i in range(len(variable_groups))]
-                length_tabs = st.tabs(tab_names)
-            else:
-                length_tabs = [st]  # Jeśli jest tylko jedna grupa, używamy głównego obszaru
+            # Informacja o długości tekstu
+            token_estimate = len(pdf_text) / 4  # Przybliżona liczba tokenów (4 znaki na token)
+            if token_estimate > 100000:
+                st.warning(f"Uwaga: Tekst zawiera około {int(token_estimate)} tokenów, co może przekroczyć limit kontekstu wybranego modelu.")
             
-            # Dla każdej zakładki/grupy
-            lengths = {}
-            for i, group in enumerate(variable_groups):
-                with length_tabs[i] if len(variable_groups) > 1 else length_tabs[0]:
-                    # Dla każdej zmiennej w grupie
-                    for var in group:
-                        # Określ domyślną długość w zależności od typu zmiennej
-                        default_length = 300
-                        if var in ["contents", "faq", "testimonials"]:
-                            default_length = 600
-                        elif var in ["key_benefits", "problems_solved"]:
-                            default_length = 400
-                        
-                        # Stwórz suwak do ustawienia długości
-                        lengths[var] = st.slider(
-                            f"{var.replace('_', ' ').title()}", 
-                            min_value=100, 
-                            max_value=1000, 
-                            value=default_length,
-                            help=f"Dostosuj długość dla zmiennej {var}"
-                        )
+            # Analiza PDF i uzyskanie treści marketingowych tylko dla wymaganych zmiennych
+            json_data = analyze_pdf_with_openai(
+                pdf_text, 
+                persona, 
+                required_variables, 
+                author_info, 
+                model=openai_model, 
+                tone=tone, 
+                lengths=lengths
+            )
             
-            # Generuj treści
-            generate_button = st.button("Generuj treści")
+            progress_bar.progress(90)
             
-            if generate_button:
-                progress_bar.progress(40)
-                progress_text.text("Generowanie treści dla wybranych zmiennych...")
+            if json_data:
+                # Zapisanie danych do sesji
+                st.session_state.current_json_data = json_data
                 
-                # Informacja o długości tekstu
-                token_estimate = len(pdf_text) / 4  # Przybliżona liczba tokenów (4 znaki na token)
-                if token_estimate > 100000:
-                    st.warning(f"Uwaga: Tekst zawiera około {int(token_estimate)} tokenów, co może przekroczyć limit kontekstu wybranego modelu.")
+                progress_text.text("Generowanie zakończone pomyślnie!")
+                progress_bar.progress(100)
                 
-                # Analiza PDF i uzyskanie treści marketingowych tylko dla wymaganych zmiennych
-                json_data = analyze_pdf_with_openai(
-                    pdf_text, 
-                    persona, 
-                    required_variables, 
-                    author_info, 
-                    model=openai_model, 
-                    tone=tone, 
-                    lengths=lengths
-                )
+                # Wyświetlenie edytora wygenerowanych treści
+                st.subheader("Edytuj wygenerowane treści:")
                 
-                progress_bar.progress(90)
+                # Podziel zmienne na grupy dla lepszej organizacji
+                variable_groups = {
+                    "Podstawowe informacje": ["intro", "why_created", "contents", "problems_solved", "target_audience", "example"],
+                    "Korzyści i wartość": ["key_benefits", "guarantee", "value_summary", "comparison"],
+                    "Elementy perswazyjne": ["call_to_action", "testimonials", "urgency", "transformation_story"],
+                    "Dodatkowe elementy": ["faq", "author_credentials"]
+                }
                 
-                if json_data:
-                    # Zapisanie danych do sesji
+                # Utworzenie zakładek dla grup
+                group_names = []
+                for group_name, vars_in_group in variable_groups.items():
+                    # Sprawdź, czy grupa zawiera jakiekolwiek wymagane zmienne
+                    if any(var in required_variables for var in vars_in_group):
+                        group_names.append(group_name)
+                
+                group_tabs = st.tabs(group_names)
+                
+                # Dla każdej grupy
+                edited_json = {}
+                tab_index = 0
+                
+                for group_name, vars_in_group in variable_groups.items():
+                    # Jeśli grupa zawiera wymagane zmienne
+                    group_vars = [var for var in vars_in_group if var in required_variables]
+                    if group_vars:
+                        with group_tabs[tab_index]:
+                            # Dla każdej zmiennej w grupie
+                            for var in group_vars:
+                                if var in json_data:
+                                    edited_json[var] = st.text_area(
+                                        f"{var.replace('_', ' ').title()}", 
+                                        json_data[var], 
+                                        height=200
+                                    )
+                        tab_index += 1
+                
+                # Zastosowanie zmian
+                apply_changes = st.button("Zastosuj zmiany")
+                if apply_changes:
+                    # Upewnij się, że wszystkie klucze są zachowane
+                    for key in json_data:
+                        if key not in edited_json:
+                            edited_json[key] = json_data[key]
+                    
+                    json_data = edited_json
                     st.session_state.current_json_data = json_data
-                    
-                    progress_text.text("Generowanie zakończone pomyślnie!")
-                    progress_bar.progress(100)
-                    
-                    # Wyświetlenie edytora wygenerowanych treści
-                    st.subheader("Edytuj wygenerowane treści:")
-                    
-                    # Podziel zmienne na grupy dla lepszej organizacji
-                    variable_groups = {
-                        "Podstawowe informacje": ["intro", "why_created", "contents", "problems_solved", "target_audience", "example"],
-                        "Korzyści i wartość": ["key_benefits", "guarantee", "value_summary", "comparison"],
-                        "Elementy perswazyjne": ["call_to_action", "testimonials", "urgency", "transformation_story"],
-                        "Dodatkowe elementy": ["faq", "author_credentials"]
-                    }
-                    
-                    # Utworzenie zakładek dla grup
-                    group_names = []
-                    for group_name, vars_in_group in variable_groups.items():
-                        # Sprawdź, czy grupa zawiera jakiekolwiek wymagane zmienne
-                        if any(var in required_variables for var in vars_in_group):
-                            group_names.append(group_name)
-                    
-                    group_tabs = st.tabs(group_names)
-                    
-                    # Dla każdej grupy
-                    edited_json = {}
-                    tab_index = 0
-                    
-                    for group_name, vars_in_group in variable_groups.items():
-                        # Jeśli grupa zawiera wymagane zmienne
-                        group_vars = [var for var in vars_in_group if var in required_variables]
-                        if group_vars:
-                            with group_tabs[tab_index]:
-                                # Dla każdej zmiennej w grupie
-                                for var in group_vars:
-                                    if var in json_data:
-                                        edited_json[var] = st.text_area(
-                                            f"{var.replace('_', ' ').title()}", 
-                                            json_data[var], 
-                                            height=200
-                                        )
-                            tab_index += 1
-                    
-                    # Zastosowanie zmian
-                    apply_changes = st.button("Zastosuj zmiany")
-                    if apply_changes:
-                        # Upewnij się, że wszystkie klucze są zachowane
-                        for key in json_data:
-                            if key not in edited_json:
-                                edited_json[key] = json_data[key]
-                        
-                        json_data = edited_json
-                        st.session_state.current_json_data = json_data
-                        st.success("Zmiany zostały zastosowane!")
-                    
-                    # Podstawienie wartości w kreacji mailowej
-                    final_html = replace_variables_in_html(html_template, json_data)
-                    st.session_state.current_html = final_html
-                    
-                    # Podgląd kreacji
-                    st.subheader("Podgląd kreacji:")
-                    
-                    # Przygotowanie HTML z CSS
-                    html_with_style = f"""
-                    <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        line-height: 1.6;
-                        color: #333;
-                        margin: 20px;
-                        max-width: 800px;
-                    }}
-                    h1, h2, h3, h4, h5, h6 {{
-                        color: #2c3e50;
-                        margin-top: 1.5em;
-                        margin-bottom: 0.5em;
-                    }}
-                    p {{
-                        margin-bottom: 1em;
-                    }}
-                    ul, ol {{
-                        margin-bottom: 1em;
-                        padding-left: 2em;
-                    }}
-                    blockquote {{
-                        border-left: 4px solid #ddd;
-                        padding: 0.5em 1em;
-                        margin: 1em 0;
-                        background-color: #f9f9f9;
-                    }}
-                    </style>
-                    {final_html}
-                    """
-                    
-                    # Używamy st.components.v1.html
-                    st.components.v1.html(html_with_style, height=600, scrolling=True)
-                    
-                    # Wyświetlenie końcowej kreacji (kod HTML)
-                    with st.expander("Pokaż kod HTML", expanded=False):
-                        st.code(final_html, language="html")
-                    
-                    # Przycisk do kopiowania kodu
-                    st.subheader("Kopiuj kod do schowka:")
-                    st.markdown(get_copy_button_html(final_html), unsafe_allow_html=True)
-                else:
-                    progress_text.text("Wystąpił błąd podczas analizy.")
-                    progress_bar.empty()
+                    st.success("Zmiany zostały zastosowane!")
+                
+                # Podstawienie wartości w kreacji mailowej
+                final_html = replace_variables_in_html(html_template, json_data)
+                st.session_state.current_html = final_html
+                
+                # Podgląd kreacji
+                st.subheader("Podgląd kreacji:")
+                
+                # Przygotowanie HTML z CSS
+                html_with_style = f"""
+                <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    margin: 20px;
+                    max-width: 800px;
+                }}
+                h1, h2, h3, h4, h5, h6 {{
+                    color: #2c3e50;
+                    margin-top: 1.5em;
+                    margin-bottom: 0.5em;
+                }}
+                p {{
+                    margin-bottom: 1em;
+                }}
+                ul, ol {{
+                    margin-bottom: 1em;
+                    padding-left: 2em;
+                }}
+                blockquote {{
+                    border-left: 4px solid #ddd;
+                    padding: 0.5em 1em;
+                    margin: 1em 0;
+                    background-color: #f9f9f9;
+                }}
+                </style>
+                {final_html}
+                """
+                
+                # Używamy st.components.v1.html
+                st.components.v1.html(html_with_style, height=600, scrolling=True)
+                
+                # Wyświetlenie końcowej kreacji (kod HTML)
+                with st.expander("Pokaż kod HTML", expanded=False):
+                    st.code(final_html, language="html")
+                
+                # Przycisk do kopiowania kodu
+                st.subheader("Kopiuj kod do schowka:")
+                st.markdown(get_copy_button_html(final_html), unsafe_allow_html=True)
+            else:
+                progress_text.text("Wystąpił błąd podczas analizy.")
+                progress_bar.empty()
     
-    elif submit_button:
+    elif analyze_button:
         st.warning("Proszę wypełnić wszystkie wymagane pola formularza i dodać plik PDF.")
         
     # Informacja o przykładowym szablonie
