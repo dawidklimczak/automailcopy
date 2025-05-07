@@ -380,10 +380,12 @@ def analyze_pdf_with_openai(pdf_text, persona, required_variables, author_info="
         
         # Przygotowanie promptu dla OpenAI koncentrując się tylko na wymaganych zmiennych
         prompt = f"""
-        Przeanalizuj poniższy e-book i utwórz wysokiej jakości treści marketingowe dopasowane dla następującej persony.
-        UWAGA: Generuj TYLKO treści dla wymaganych zmiennych wymienionych poniżej - nie dodawaj innych zmiennych.
+        Przeanalizuj pełny tekst e-booka i wygeneruj bloki treści marketingowej ściśle odpowiadające wskazanej personie.
+
+        ⚠️ GENERUJ WYŁĄCZNIE treści dla kluczy wymienionych w sekcji [OPISY ZMIENNYCH].  
+        ⚠️ NIE twórz dodatkowych kluczy ani nie zmieniaj ich nazewnictwa czy kolejności.
         
-        PERSONA:
+        [PERSONA]
         {persona}
         
         TON KOMUNIKACJI:
@@ -399,6 +401,8 @@ def analyze_pdf_with_openai(pdf_text, persona, required_variables, author_info="
         {pdf_text}
         
         Zwróć wynik w formacie JSON zawierający TYLKO poniższe wymagane klucze:
+
+        [OPISY ZMIENNYCH]
         """
         
         # Dodaj opis każdej wymaganej zmiennej
@@ -409,17 +413,15 @@ def analyze_pdf_with_openai(pdf_text, persona, required_variables, author_info="
         prompt += """
         
         WAŻNE WSKAZÓWKI DLA TWORZENIA TREŚCI:
-        - Stwórz treści, które są WYSOCE ANGAŻUJĄCE i PRZEKONUJĄCE marketingowo
-        - Używaj języka, który wzbudza emocje i zainteresowanie
-        - Zastosuj konkretne, obrazowe przykłady i opisy
-        - Wykorzystaj krótkie, dynamiczne zdania naprzemiennie z bardziej złożonymi
-        - Podkreśl unikalne korzyści i wartość, wykorzystaj tzw. "unique selling points"
-        - Pisz w drugiej osobie (Ty, Twój) aby stworzyć bezpośredni kontakt z czytelnikiem
-        - Używaj aktywnych czasowników i unikaj strony biernej
-        - NIE DODAWAJ TYTUŁÓW SEKCJI, tylko ich zawartość
-        - UŻYWAJ TYLKO PODSTAWOWEGO FORMATOWANIA HTML - wyłącznie <strong>, <em>, <br>, <li> dla list oraz <ul> dla list punktowanych
-        - NIE DODAWAJ znaczników <div>, <span>, <p>, <blockquote>, <dl>, atrybutów 'class', 'id' lub jakichkolwiek innych elementów formatowania
-        - Każda sekcja musi być starannie opracowana i dopasowana do potrzeb persony
+        • Twórz teksty maksymalnie angażujące, skupione na praktycznej wartości.  
+        • Podkreślaj unique selling points – konkrety zamiast ogólników.  
+        • Pisz w drugiej osobie („Ty”, „Twój”) i stosuj aktywne czasowniki.  
+        • Mieszaj krótkie zdania z rozbudowanymi dla rytmu i dynamiki.  
+        • Wplataj obrazowe przykłady i dane liczbowe (jeśli znajdują się w e-booku).  
+        • NIE dodawaj tytułów sekcji – zwróć wyłącznie treść odpowiadającą zmiennym.  
+        • Dopuszczalne tagi HTML: <strong>, <em>, <ul>, <li>, <br>.  
+            – Zakaz używania <div>, <span>, <p>, <blockquote>, <dl>, atrybutów class/id i inline-style.  
+        • Jeśli brak danych w e-booku dla danej zmiennej, zwróć pusty string "" (nie placeholder).
         
         Odpowiedź musi być w formacie JSON, używaj minimalnego formatowania HTML.
         WAŻNE: Zwróć TYLKO obiekt JSON bez dodatkowego tekstu przed lub po.
