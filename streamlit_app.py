@@ -9,7 +9,7 @@ from jsonschema import validate, ValidationError
 
 # Konfiguracja strony
 st.set_page_config(
-    page_title="Generator treści marketingowych do maili,
+    page_title="Generator treści marketingowych do maili"
     layout="wide"
 )
 
